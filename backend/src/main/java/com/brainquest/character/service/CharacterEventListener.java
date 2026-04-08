@@ -1,12 +1,11 @@
 package com.brainquest.character.service;
 
+import com.brainquest.battle.entity.BattleResult;
 import com.brainquest.character.entity.StatType;
-import com.brainquest.event.events.CheckinCompletedEvent;
-import com.brainquest.event.events.MedLogCompletedEvent;
-import com.brainquest.event.events.ScreeningCompletedEvent;
-import com.brainquest.event.events.StreakUpdatedEvent;
+import com.brainquest.event.events.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -16,23 +15,20 @@ import java.util.Map;
 /**
  * CHARACTER 모듈 이벤트 리스너.
  *
- * <p>GATE 모듈에서 발행하는 이벤트를 구독하여 캐릭터 경험치를 지급한다.</p>
+ * <p>각 모듈에서 발행하는 이벤트를 구독하여 캐릭터 경험치/골드를 지급한다.</p>
  *
- * <p><b>트랜잭션 안전:</b> {@code AFTER_COMMIT}으로 동작하여, 원본 트랜잭션 커밋 후에만
- * 경험치가 지급된다. 이를 통해 롤백 시 경험치 유실/오지급을 방지한다.</p>
- *
- * <p><b>중복 지급 주의:</b></p>
+ * <p><b>트랜잭션 정책:</b></p>
  * <ul>
- *   <li>GATE 이벤트: 이 리스너에서만 경험치 지급 (서비스에서 직접 호출하지 않음)</li>
- *   <li>QUEST 이벤트: QuestService가 CharacterService를 직접 호출하므로
- *       여기에 리스너를 추가하면 <b>중복 지급</b> 발생</li>
- *   <li>BATTLE 이벤트: BattleService 구현 시 동일 원칙 적용</li>
+ *   <li>GATE 이벤트: {@code AFTER_COMMIT} — 원본 트랜잭션 커밋 후 실행</li>
+ *   <li>BATTLE/QUEST/SKY 이벤트: {@code @EventListener} — 발행자 트랜잭션에 참여</li>
  * </ul>
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CharacterEventListener {
+
+    private static final int EMOTION_EXP = 5;
 
     private static final Map<Integer, Integer> STREAK_BONUS_MAP = Map.of(
             7, 50, 14, 100, 30, 200, 60, 500, 100, 1000
@@ -102,6 +98,75 @@ public class CharacterEventListener {
         } catch (Exception e) {
             log.error("스트릭 보너스 경험치 지급 실패: userId={}, count={}, exp={}",
                     event.getUserId(), event.getCurrentCount(), bonusExp, e);
+        }
+    }
+
+    // ── BATTLE / QUEST / SKY 이벤트 (발행자 트랜잭션에 참여) ──
+
+    /**
+     * 전투 완료 → ATK 경험치 + 골드 지급.
+     */
+    @EventListener
+    public void handleBattleCompleted(BattleCompletedEvent event) {
+        try {
+            if (event.getExpEarned() > 0) {
+                log.debug("전투 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpEarned());
+                characterService.addExp(event.getUserId(), event.getExpEarned(), StatType.ATK);
+            }
+            if (event.getGoldEarned() > 0) {
+                characterService.addGold(event.getUserId(), event.getGoldEarned());
+            }
+        } catch (Exception e) {
+            log.error("전투 완료 경험치/골드 지급 실패: userId={}, {}", event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 체크포인트 완료 → WIS 경험치 + 골드 지급.
+     */
+    @EventListener
+    public void handleCheckpointCompleted(CheckpointCompletedEvent event) {
+        try {
+            log.debug("체크포인트 경험치 지급: userId={}, exp={}, gold={}",
+                    event.getUserId(), event.getExpReward(), event.getGoldReward());
+            characterService.addExp(event.getUserId(), event.getExpReward(), StatType.WIS);
+            if (event.getGoldReward() > 0) {
+                characterService.addGold(event.getUserId(), event.getGoldReward());
+            }
+        } catch (Exception e) {
+            log.error("체크포인트 경험치/골드 지급 실패: userId={}, {}", event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 퀘스트 완료 → 잔여 WIS 경험치 + 골드 + 아이템 드롭.
+     */
+    @EventListener
+    public void handleQuestCompleted(QuestCompletedEvent event) {
+        try {
+            if (event.getExpReward() > 0) {
+                log.debug("퀘스트 잔여 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
+                characterService.addExp(event.getUserId(), event.getExpReward(), StatType.WIS);
+            }
+            if (event.getGoldReward() > 0) {
+                characterService.addGold(event.getUserId(), event.getGoldReward());
+            }
+            characterService.dropItem(event.getUserId(), event.getGrade());
+        } catch (Exception e) {
+            log.error("퀘스트 완료 보상 지급 실패: userId={}, {}", event.getUserId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 감정 기록 완료 → DEF 경험치 +5.
+     */
+    @EventListener
+    public void handleEmotionRecorded(EmotionRecordedEvent event) {
+        try {
+            log.debug("감정 기록 경험치 지급: userId={}, exp={}", event.getUserId(), EMOTION_EXP);
+            characterService.addExp(event.getUserId(), EMOTION_EXP, StatType.DEF);
+        } catch (Exception e) {
+            log.error("감정 기록 경험치 지급 실패: userId={}, {}", event.getUserId(), e.getMessage(), e);
         }
     }
 }

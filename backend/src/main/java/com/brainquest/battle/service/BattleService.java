@@ -5,7 +5,6 @@ import com.brainquest.battle.entity.*;
 import com.brainquest.battle.repository.BattleExitRepository;
 import com.brainquest.battle.repository.BattleSessionRepository;
 import com.brainquest.character.dto.UserItemResponse;
-import com.brainquest.character.entity.StatType;
 import com.brainquest.character.service.CharacterService;
 import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
@@ -34,11 +33,8 @@ import java.util.Set;
 /**
  * 전투 서비스.
  *
- * <p><b>중복 지급 주의:</b> 이 서비스는 {@code characterService.addExp/addGold}를 직접 호출하여
- * 경험치·골드를 지급한다. {@code BattleCompletedEvent}는 QUEST 모듈(체크포인트 자동 완료) 등
- * 연동 목적으로 발행되므로, 이 이벤트를 구독하는 리스너에서 경험치를 추가 지급하면
- * <b>중복 지급</b>이 발생한다. {@code CharacterEventListener}에 BATTLE 이벤트 리스너를
- * 추가하지 말 것.</p>
+ * <p>경험치/골드 지급은 {@code BattleCompletedEvent}를 통해
+ * {@code CharacterEventListener}에서 처리된다.</p>
  */
 @Slf4j
 @Service
@@ -247,35 +243,27 @@ public class BattleService {
                 expEarned, goldEarned, itemDrops);
         battleSessionRepository.save(session);
 
-        // 레벨업 감지를 위해 현재 레벨 기록 (DB 조회 1회로 통합)
+        // 레벨업 감지를 위해 현재 레벨 기록
         var prevCharacter = characterService.getCharacter(userId);
         int prevLevel = prevCharacter.level();
-
-        // 경험치/골드 지급
-        if (expEarned > 0) {
-            characterService.addExp(userId, expEarned, StatType.ATK);
-        }
-        if (goldEarned > 0) {
-            characterService.addGold(userId, goldEarned);
-        }
-
-        // 레벨업 확인 (경험치 지급 후에만 재조회)
-        Integer levelUp = null;
-        if (expEarned > 0) {
-            int newLevel = characterService.getCharacter(userId).level();
-            levelUp = newLevel > prevLevel ? newLevel : null;
-        }
 
         // 스트릭 갱신 (VICTORY만)
         if (req.result() == BattleResult.VICTORY) {
             updateBattleStreak(userId);
         }
 
-        // 이벤트 발행
+        // 이벤트 발행 → CharacterEventListener가 동기적으로 경험치/골드 지급
         eventPublisher.publishEvent(new BattleCompletedEvent(
                 this, userId, sessionId, req.result(),
                 expEarned, goldEarned,
                 session.getCheckpointId(), session.getQuestId()));
+
+        // 레벨업 확인 (이벤트 리스너에서 경험치 지급 완료 후)
+        Integer levelUp = null;
+        if (expEarned > 0) {
+            int newLevel = characterService.getCharacter(userId).level();
+            levelUp = newLevel > prevLevel ? newLevel : null;
+        }
 
         log.info("전투 종료: userId={}, sessionId={}, result={}, exp={}, gold={}, combo={}",
                 userId, sessionId, req.result(), expEarned, goldEarned, validatedCombo);

@@ -1,8 +1,5 @@
 package com.brainquest.quest.service;
 
-import com.brainquest.character.dto.UserItemResponse;
-import com.brainquest.character.entity.StatType;
-import com.brainquest.character.service.CharacterService;
 import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
 import com.brainquest.event.events.CheckpointCompletedEvent;
@@ -40,13 +37,12 @@ public class QuestService {
     private final QuestRepository questRepository;
     private final CheckpointRepository checkpointRepository;
     private final ClaudeApiClient claudeApiClient;
-    private final CharacterService characterService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
      * Claude API를 호출하여 할 일을 RPG 퀘스트로 변환한다 (아직 저장하지 않음).
+     * <p>외부 API 호출만 수행하고 DB 쓰기가 없으므로 트랜잭션을 사용하지 않는다.</p>
      */
-    @Transactional
     public GenerateQuestResponse generateQuest(Long userId, GenerateQuestRequest req) {
         QuestGenerationResult result = claudeApiClient.generateQuestStory(
                 userId, req.originalTitle(), req.estimatedMin(), req.category());
@@ -181,18 +177,14 @@ public class QuestService {
         checkpoint.complete();
         checkpointRepository.save(checkpoint);
 
-        // 체크포인트 보상 지급
-        characterService.addExp(userId, checkpoint.getExpReward(), StatType.WIS);
-        characterService.addGold(userId, checkpoint.getGoldReward());
-
-        // 이벤트 발행
+        // 이벤트 발행 → CharacterEventListener가 동기적으로 WIS 경험치 + 골드 지급
         eventPublisher.publishEvent(new CheckpointCompletedEvent(
-                this, userId, checkpointId, questId, checkpoint.getExpReward()));
+                this, userId, checkpointId, questId,
+                checkpoint.getExpReward(), checkpoint.getGoldReward()));
 
         int totalRewardExp = checkpoint.getExpReward();
         int totalRewardGold = checkpoint.getGoldReward();
         boolean questCompleted = false;
-        UserItemResponse itemDrop = null;
 
         // 모든 체크포인트 완료 여부 체크
         int completedCount = countCompletedCheckpoints(quest);
@@ -203,27 +195,18 @@ public class QuestService {
             questRepository.save(quest);
             questCompleted = true;
 
-            // 퀘스트 전체 보상 잔여분 지급
+            // 퀘스트 전체 보상 잔여분 계산
             int cpTotalExp = quest.getCheckpoints().stream().mapToInt(Checkpoint::getExpReward).sum();
             int cpTotalGold = quest.getCheckpoints().stream().mapToInt(Checkpoint::getGoldReward).sum();
-            int remainingExp = quest.getExpReward() - cpTotalExp;
-            int remainingGold = quest.getGoldReward() - cpTotalGold;
-            if (remainingExp > 0) {
-                characterService.addExp(userId, remainingExp, StatType.WIS);
-                totalRewardExp += remainingExp;
-            }
-            if (remainingGold > 0) {
-                characterService.addGold(userId, remainingGold);
-                totalRewardGold += remainingGold;
-            }
+            int remainingExp = Math.max(0, quest.getExpReward() - cpTotalExp);
+            int remainingGold = Math.max(0, quest.getGoldReward() - cpTotalGold);
+            totalRewardExp += remainingExp;
+            totalRewardGold += remainingGold;
 
-            // 아이템 드롭
-            itemDrop = characterService.dropItem(userId, quest.getGrade().name());
-
-            // 퀘스트 완료 이벤트 발행
+            // 퀘스트 완료 이벤트 발행 → CharacterEventListener가 잔여 보상 + 아이템 드롭 처리
             eventPublisher.publishEvent(new QuestCompletedEvent(
                     this, userId, questId, quest.getGrade().name(),
-                    quest.getExpReward(), quest.getGoldReward()));
+                    remainingExp, remainingGold));
 
             log.info("퀘스트 완료! userId={}, questId={}, grade={}", userId, questId, quest.getGrade());
         }
@@ -232,7 +215,7 @@ public class QuestService {
                 CheckpointResponse.from(checkpoint),
                 new RewardResponse(totalRewardExp, totalRewardGold),
                 questCompleted,
-                itemDrop
+                null
         );
     }
 

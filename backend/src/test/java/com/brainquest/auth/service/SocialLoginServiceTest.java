@@ -11,6 +11,8 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -124,6 +126,43 @@ class SocialLoginServiceTest {
             assertThatThrownBy(() -> socialLoginService.getUserProfile("KAKAO", "kakao-token"))
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessage("카카오 사용자 정보 조회 실패");
+        }
+
+        @Test
+        @DisplayName("카카오 토큰 만료/무효 — UnauthorizedException")
+        @SuppressWarnings("unchecked")
+        void invalidToken_throwsUnauthorized() {
+            // given
+            given(restTemplate.exchange(
+                    anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)
+            )).willThrow(HttpClientErrorException.Unauthorized.create(
+                    HttpStatus.UNAUTHORIZED, "Unauthorized", null, null, null));
+
+            org.springframework.test.util.ReflectionTestUtils.setField(
+                    socialLoginService, "restTemplate", restTemplate);
+
+            // when & then
+            assertThatThrownBy(() -> socialLoginService.getUserProfile("KAKAO", "invalid-token"))
+                    .isInstanceOf(com.brainquest.common.exception.UnauthorizedException.class)
+                    .hasMessageContaining("카카오 액세스 토큰");
+        }
+
+        @Test
+        @DisplayName("카카오 API 연결 실패 — IllegalStateException")
+        @SuppressWarnings("unchecked")
+        void connectionFailure_throwsIllegalState() {
+            // given
+            given(restTemplate.exchange(
+                    anyString(), eq(HttpMethod.GET), any(HttpEntity.class), eq(Map.class)
+            )).willThrow(new ResourceAccessException("Connection refused"));
+
+            org.springframework.test.util.ReflectionTestUtils.setField(
+                    socialLoginService, "restTemplate", restTemplate);
+
+            // when & then
+            assertThatThrownBy(() -> socialLoginService.getUserProfile("KAKAO", "some-token"))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("소셜 로그인 서비스에 연결할 수 없습니다");
         }
     }
 

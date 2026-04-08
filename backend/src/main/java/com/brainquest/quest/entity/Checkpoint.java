@@ -44,6 +44,9 @@ public class Checkpoint {
     @Column(name = "completed_at")
     private LocalDateTime completedAt;
 
+    @Version
+    private int version;
+
     @Builder
     public Checkpoint(int orderNum, String title, int estimatedMin,
                       int expReward, int goldReward) {

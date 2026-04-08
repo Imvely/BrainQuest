@@ -30,7 +30,12 @@ public class MapEventListener {
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleQuestCompleted(QuestCompletedEvent event) {
-        mapBlockCompleter.completeBlocksByQuestId(event.getQuestId());
+        try {
+            mapBlockCompleter.completeBlocksByQuestId(event.getQuestId());
+        } catch (Exception e) {
+            log.error("퀘스트 완료 → 타임블록 자동 완료 실패: questId={}, {}",
+                    event.getQuestId(), e.getMessage(), e);
+        }
     }
 
     /**

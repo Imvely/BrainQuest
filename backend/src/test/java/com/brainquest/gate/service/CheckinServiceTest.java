@@ -20,6 +20,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -307,6 +308,139 @@ class CheckinServiceTest {
             assertThat(count).isEqualTo(1);
             // orElseGet에서 1번 + recordToday 후 명시적 save 1번 = 총 2번
             verify(streakRepository, times(2)).save(any(Streak.class));
+        }
+    }
+
+    // --- submitEveningCheckin 추가 ---
+
+    @Nested
+    @DisplayName("submitEveningCheckin 추가 케이스")
+    class SubmitEveningCheckinExtra {
+
+        @Test
+        @DisplayName("중복 — DuplicateResourceException")
+        void duplicate_throwsException() {
+            // given
+            Long userId = 1L;
+            CheckinRequest request = new CheckinRequest(
+                    CheckinType.EVENING, null, null, null,
+                    4, 3, 5, null);
+
+            given(dailyCheckinRepository.existsByUserIdAndCheckinDateAndCheckinType(
+                    userId, LocalDate.now(), CheckinType.EVENING)).willReturn(true);
+
+            // when & then
+            assertThatThrownBy(() -> checkinService.submitEveningCheckin(userId, request))
+                    .isInstanceOf(DuplicateResourceException.class)
+                    .hasMessageContaining("EVENING");
+
+            verify(dailyCheckinRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("impulsivityScore 범위 초과 — IllegalArgumentException")
+        void invalidImpulsivity_throwsException() {
+            Long userId = 1L;
+            CheckinRequest request = new CheckinRequest(
+                    CheckinType.EVENING, null, null, null,
+                    3, 0, 5, null);  // impulsivityScore=0 → 1-5 범위 미달
+
+            given(dailyCheckinRepository.existsByUserIdAndCheckinDateAndCheckinType(
+                    userId, LocalDate.now(), CheckinType.EVENING)).willReturn(false);
+
+            assertThatThrownBy(() -> checkinService.submitEveningCheckin(userId, request))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("impulsivityScore");
+        }
+    }
+
+    // --- getCheckinHistory ---
+
+    @Nested
+    @DisplayName("getCheckinHistory")
+    class GetCheckinHistory {
+
+        @Test
+        @DisplayName("정상 — 기간 내 체크인 기록 반환")
+        void success() {
+            // given
+            Long userId = 1L;
+            LocalDate from = LocalDate.of(2026, 4, 1);
+            LocalDate to = LocalDate.of(2026, 4, 7);
+
+            DailyCheckin c1 = DailyCheckin.builder()
+                    .userId(userId).checkinType(CheckinType.MORNING)
+                    .checkinDate(LocalDate.of(2026, 4, 5))
+                    .sleepHours(BigDecimal.valueOf(7)).sleepQuality(2).condition(4)
+                    .build();
+            DailyCheckin c2 = DailyCheckin.builder()
+                    .userId(userId).checkinType(CheckinType.EVENING)
+                    .checkinDate(LocalDate.of(2026, 4, 5))
+                    .focusScore(4).impulsivityScore(3).emotionScore(5)
+                    .build();
+
+            given(dailyCheckinRepository
+                    .findByUserIdAndCheckinDateBetweenOrderByCheckinDateDesc(userId, from, to))
+                    .willReturn(List.of(c1, c2));
+
+            // when
+            var history = checkinService.getCheckinHistory(userId, from, to);
+
+            // then
+            assertThat(history).hasSize(2);
+            assertThat(history.get(0).type()).isEqualTo(CheckinType.MORNING);
+            assertThat(history.get(1).type()).isEqualTo(CheckinType.EVENING);
+        }
+
+        @Test
+        @DisplayName("기록 없음 — 빈 목록")
+        void empty() {
+            Long userId = 1L;
+            LocalDate from = LocalDate.of(2026, 3, 1);
+            LocalDate to = LocalDate.of(2026, 3, 31);
+
+            given(dailyCheckinRepository
+                    .findByUserIdAndCheckinDateBetweenOrderByCheckinDateDesc(userId, from, to))
+                    .willReturn(List.of());
+
+            var history = checkinService.getCheckinHistory(userId, from, to);
+
+            assertThat(history).isEmpty();
+        }
+    }
+
+    // --- getStreaks ---
+
+    @Nested
+    @DisplayName("getStreaks")
+    class GetStreaks {
+
+        @Test
+        @DisplayName("정상 — 전체 스트릭 목록 반환")
+        void success() {
+            Long userId = 1L;
+            Streak s1 = Streak.builder().userId(userId).streakType(StreakType.CHECKIN).build();
+            s1.recordToday(LocalDate.now());
+            Streak s2 = Streak.builder().userId(userId).streakType(StreakType.BATTLE).build();
+            s2.recordToday(LocalDate.now());
+
+            given(streakRepository.findAllByUserId(userId)).willReturn(List.of(s1, s2));
+
+            var streaks = checkinService.getStreaks(userId);
+
+            assertThat(streaks).hasSize(2);
+            assertThat(streaks.get(0).streakType()).isEqualTo(StreakType.CHECKIN);
+            assertThat(streaks.get(1).streakType()).isEqualTo(StreakType.BATTLE);
+        }
+
+        @Test
+        @DisplayName("스트릭 없음 — 빈 목록")
+        void empty() {
+            given(streakRepository.findAllByUserId(1L)).willReturn(List.of());
+
+            var streaks = checkinService.getStreaks(1L);
+
+            assertThat(streaks).isEmpty();
         }
     }
 }

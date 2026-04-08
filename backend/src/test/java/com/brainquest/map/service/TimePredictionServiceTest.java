@@ -2,6 +2,7 @@ package com.brainquest.map.service;
 
 import com.brainquest.character.entity.StatType;
 import com.brainquest.character.service.CharacterService;
+import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
 import com.brainquest.map.dto.PredictionResponse;
 import com.brainquest.map.dto.PredictionResultResponse;
@@ -279,6 +280,26 @@ class TimePredictionServiceTest {
 
             verify(characterService, never()).addExp(any(), anyInt(), any());
             verify(timePredictionRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("이미 실제 시간 기록됨 — DuplicateResourceException")
+        void duplicateActual_throwsException() {
+            // given
+            Long userId = 1L;
+            TimeBlock block = createBlock(10L, userId);
+            TimePrediction prediction = createPrediction(1L, userId, block, 30);
+            prediction.recordActual(28); // 이미 기록됨
+
+            given(timePredictionRepository.findByIdAndUserId(1L, userId))
+                    .willReturn(Optional.of(prediction));
+
+            // when & then
+            assertThatThrownBy(() -> timePredictionService.recordActual(userId, 1L, 35))
+                    .isInstanceOf(DuplicateResourceException.class)
+                    .hasMessageContaining("이미 실제 시간이 기록");
+
+            verify(characterService, never()).addExp(any(), anyInt(), any());
         }
     }
 }

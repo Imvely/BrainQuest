@@ -1,12 +1,11 @@
 package com.brainquest.character.service;
 
+import com.brainquest.battle.entity.BattleResult;
 import com.brainquest.character.entity.StatType;
-import com.brainquest.event.events.CheckinCompletedEvent;
-import com.brainquest.event.events.MedLogCompletedEvent;
-import com.brainquest.event.events.ScreeningCompletedEvent;
-import com.brainquest.event.events.StreakUpdatedEvent;
+import com.brainquest.event.events.*;
 import com.brainquest.gate.entity.CheckinType;
 import com.brainquest.gate.entity.StreakType;
+import com.brainquest.sky.entity.WeatherType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -15,10 +14,10 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
+
+
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CharacterEventListener 단위 테스트")
@@ -127,6 +126,120 @@ class CharacterEventListenerTest {
             listener.handleStreakUpdated(event);
 
             verify(characterService, never()).addExp(any(), anyInt(), any());
+        }
+    }
+
+    // ── BATTLE / QUEST / SKY 이벤트 ──
+
+    @Nested
+    @DisplayName("handleBattleCompleted")
+    class HandleBattleCompleted {
+
+        @Test
+        @DisplayName("VICTORY — ATK 경험치 + 골드 지급")
+        void victory_grantsExpAndGold() {
+            var event = new BattleCompletedEvent(this, 1L, 10L,
+                    BattleResult.VICTORY, 50, 25, null, null);
+
+            listener.handleBattleCompleted(event);
+
+            verify(characterService).addExp(1L, 50, StatType.ATK);
+            verify(characterService).addGold(1L, 25);
+        }
+
+        @Test
+        @DisplayName("DEFEAT — 경험치만 지급 (골드 0)")
+        void defeat_grantsExpOnly() {
+            var event = new BattleCompletedEvent(this, 1L, 10L,
+                    BattleResult.DEFEAT, 15, 0, null, null);
+
+            listener.handleBattleCompleted(event);
+
+            verify(characterService).addExp(1L, 15, StatType.ATK);
+            verify(characterService, never()).addGold(anyLong(), anyInt());
+        }
+
+        @Test
+        @DisplayName("ABANDON — 경험치/골드 모두 0이면 미지급")
+        void abandon_noReward() {
+            var event = new BattleCompletedEvent(this, 1L, 10L,
+                    BattleResult.ABANDON, 0, 0, null, null);
+
+            listener.handleBattleCompleted(event);
+
+            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
+            verify(characterService, never()).addGold(anyLong(), anyInt());
+        }
+    }
+
+    @Nested
+    @DisplayName("handleCheckpointCompleted")
+    class HandleCheckpointCompleted {
+
+        @Test
+        @DisplayName("체크포인트 완료 → WIS 경험치 + 골드 지급")
+        void grantsWisExpAndGold() {
+            var event = new CheckpointCompletedEvent(this, 1L, 10L, 5L, 12, 7);
+
+            listener.handleCheckpointCompleted(event);
+
+            verify(characterService).addExp(1L, 12, StatType.WIS);
+            verify(characterService).addGold(1L, 7);
+        }
+
+        @Test
+        @DisplayName("골드 0이면 addGold 미호출")
+        void zeroGold_skipsAddGold() {
+            var event = new CheckpointCompletedEvent(this, 1L, 10L, 5L, 10, 0);
+
+            listener.handleCheckpointCompleted(event);
+
+            verify(characterService).addExp(1L, 10, StatType.WIS);
+            verify(characterService, never()).addGold(anyLong(), anyInt());
+        }
+    }
+
+    @Nested
+    @DisplayName("handleQuestCompleted")
+    class HandleQuestCompleted {
+
+        @Test
+        @DisplayName("잔여 보상 + 아이템 드롭 시도")
+        void grantsRemainingAndDropsItem() {
+            var event = new QuestCompletedEvent(this, 1L, 5L, "C", 5, 3);
+
+            listener.handleQuestCompleted(event);
+
+            verify(characterService).addExp(1L, 5, StatType.WIS);
+            verify(characterService).addGold(1L, 3);
+            verify(characterService).dropItem(1L, "C");
+        }
+
+        @Test
+        @DisplayName("잔여 보상 0 → addExp/addGold 미호출, dropItem만")
+        void noRemaining_onlyDropItem() {
+            var event = new QuestCompletedEvent(this, 1L, 5L, "D", 0, 0);
+
+            listener.handleQuestCompleted(event);
+
+            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
+            verify(characterService, never()).addGold(anyLong(), anyInt());
+            verify(characterService).dropItem(1L, "D");
+        }
+    }
+
+    @Nested
+    @DisplayName("handleEmotionRecorded")
+    class HandleEmotionRecorded {
+
+        @Test
+        @DisplayName("감정 기록 → DEF 경험치 +5")
+        void grantsDefExp() {
+            var event = new EmotionRecordedEvent(this, 1L, WeatherType.SUNNY, 4);
+
+            listener.handleEmotionRecorded(event);
+
+            verify(characterService).addExp(1L, 5, StatType.DEF);
         }
     }
 }

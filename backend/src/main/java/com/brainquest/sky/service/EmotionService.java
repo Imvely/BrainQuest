@@ -1,7 +1,5 @@
 package com.brainquest.sky.service;
 
-import com.brainquest.character.entity.StatType;
-import com.brainquest.character.service.CharacterService;
 import com.brainquest.event.events.EmotionRecordedEvent;
 import com.brainquest.sky.dto.*;
 import com.brainquest.sky.entity.EmotionRecord;
@@ -24,10 +22,8 @@ import java.util.stream.Collectors;
 public class EmotionService {
 
     private static final int DAILY_RECORD_LIMIT = 5;
-    private static final int EMOTION_EXP = 5;
 
     private final EmotionRecordRepository emotionRecordRepository;
-    private final CharacterService characterService;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -36,18 +32,18 @@ public class EmotionService {
      */
     @Transactional
     public EmotionResponse recordEmotion(Long userId, RecordEmotionRequest req) {
-        // 일일 5회 제한 체크
-        LocalDate today = LocalDate.now();
-        LocalDateTime dayStart = today.atStartOfDay();
-        LocalDateTime dayEnd = today.atTime(LocalTime.MAX);
-
-        long todayCount = emotionRecordRepository.countByUserIdAndRecordedAtBetween(
-                userId, dayStart, dayEnd);
-        if (todayCount >= DAILY_RECORD_LIMIT) {
-            throw new IllegalStateException("일일 최대 5회 기록 가능합니다");
-        }
-
         LocalDateTime recordedAt = req.recordedAt() != null ? req.recordedAt() : LocalDateTime.now();
+
+        // 일일 5회 제한 체크 — recordedAt 날짜 기준 (조작 방지)
+        LocalDate recordDate = recordedAt.toLocalDate();
+        LocalDateTime dayStart = recordDate.atStartOfDay();
+        LocalDateTime dayEnd = recordDate.atTime(LocalTime.MAX);
+
+        long dayCount = emotionRecordRepository.countByUserIdAndRecordedAtBetween(
+                userId, dayStart, dayEnd);
+        if (dayCount >= DAILY_RECORD_LIMIT) {
+            throw new IllegalStateException("해당 날짜에 이미 최대 5회 기록되었습니다");
+        }
 
         EmotionRecord record = EmotionRecord.builder()
                 .userId(userId)
@@ -62,10 +58,7 @@ public class EmotionService {
         log.debug("감정 기록 저장: userId={}, weather={}, intensity={}",
                 userId, req.weatherType(), req.intensity());
 
-        // DEF 경험치 지급
-        characterService.addExp(userId, EMOTION_EXP, StatType.DEF);
-
-        // 이벤트 발행
+        // 이벤트 발행 → CharacterEventListener가 DEF 경험치 +5 지급
         eventPublisher.publishEvent(
                 new EmotionRecordedEvent(this, userId, req.weatherType(), req.intensity()));
 

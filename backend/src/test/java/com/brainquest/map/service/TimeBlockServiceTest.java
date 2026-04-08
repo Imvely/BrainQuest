@@ -202,6 +202,22 @@ class TimeBlockServiceTest {
             assertThatThrownBy(() -> timeBlockService.createBlock(userId, req))
                     .isInstanceOf(DuplicateResourceException.class)
                     .hasMessageContaining("이미 블록이 존재합니다");
+        }
+
+        @Test
+        @DisplayName("시작 시간 >= 종료 시간 — IllegalArgumentException")
+        void invalidTimeRange_throwsException() {
+            Long userId = 1L;
+            var req = new CreateBlockRequest(
+                    LocalDate.of(2026, 4, 8),
+                    LocalTime.of(10, 0), LocalTime.of(9, 0),  // start > end
+                    BlockCategory.WORK, "회의", null);
+
+            assertThatThrownBy(() -> timeBlockService.createBlock(userId, req))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("시작 시간");
+
+            verify(timeBlockRepository, never()).save(any());
 
             verify(timeBlockRepository, never()).save(any());
         }
@@ -470,6 +486,42 @@ class TimeBlockServiceTest {
             // then — 같은 퀘스트 2개 블록이지만 퀘스트 1개로 집계
             assertThat(res.questSummary().total()).isEqualTo(1);
             assertThat(res.questSummary().completed()).isEqualTo(0);
+        }
+
+        @Test
+        @DisplayName("감정 기록 포함 — 타임라인에 감정 요약 반환")
+        void withEmotionRecords() {
+            // given
+            Long userId = 1L;
+            LocalDate date = LocalDate.of(2026, 4, 8);
+
+            given(timeBlockRepository.findAllByUserIdAndBlockDateOrderByStartTime(userId, date))
+                    .willReturn(List.of());
+            given(battleSessionRepository.findAllByUserIdAndStartedAtBetween(
+                    eq(userId), any(), any())).willReturn(List.of());
+
+            User user = createUser(userId, LocalTime.of(23, 0));
+            given(userRepository.findById(userId)).willReturn(Optional.of(user));
+
+            var emotion = com.brainquest.sky.entity.EmotionRecord.builder()
+                    .userId(userId)
+                    .weatherType(com.brainquest.sky.entity.WeatherType.SUNNY)
+                    .intensity(4)
+                    .memo("기분 좋다")
+                    .recordedAt(date.atTime(14, 30))
+                    .build();
+
+            given(emotionRecordRepository.findAllByUserIdAndRecordedAtBetweenOrderByRecordedAt(
+                    eq(userId), any(), any())).willReturn(List.of(emotion));
+
+            // when
+            TimelineResponse res = timeBlockService.getTimeline(userId, date);
+
+            // then
+            assertThat(res.emotionRecords()).hasSize(1);
+            assertThat(res.emotionRecords().get(0).weatherType()).isEqualTo("SUNNY");
+            assertThat(res.emotionRecords().get(0).intensity()).isEqualTo(4);
+            assertThat(res.emotionRecords().get(0).memo()).isEqualTo("기분 좋다");
         }
     }
 

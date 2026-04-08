@@ -295,6 +295,16 @@ class CharacterServiceTest {
         }
 
         @Test
+        @DisplayName("amount 0 이하 — 스킵, save 호출 없음")
+        void zeroAmount_skips() {
+            characterService.addExp(1L, 0, StatType.ATK);
+            characterService.addExp(1L, -5, StatType.ATK);
+
+            verify(characterRepository, never()).findByUserId(any());
+            verify(characterRepository, never()).save(any());
+        }
+
+        @Test
         @DisplayName("레벨업 없이 경험치 + 스탯 증가")
         void noLevelUp_expAndStatIncrease() {
             // given
@@ -460,6 +470,16 @@ class CharacterServiceTest {
     @Nested
     @DisplayName("addGold")
     class AddGold {
+
+        @Test
+        @DisplayName("amount 0 이하 — 스킵, save 호출 없음")
+        void zeroAmount_skips() {
+            characterService.addGold(1L, 0);
+            characterService.addGold(1L, -10);
+
+            verify(characterRepository, never()).findByUserId(any());
+            verify(characterRepository, never()).save(any());
+        }
 
         @Test
         @DisplayName("정상 — 골드 추가")

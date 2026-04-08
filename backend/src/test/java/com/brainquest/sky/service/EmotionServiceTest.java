@@ -1,7 +1,5 @@
 package com.brainquest.sky.service;
 
-import com.brainquest.character.entity.StatType;
-import com.brainquest.character.service.CharacterService;
 import com.brainquest.event.events.EmotionRecordedEvent;
 import com.brainquest.sky.dto.*;
 import com.brainquest.sky.entity.EmotionRecord;
@@ -39,9 +37,6 @@ class EmotionServiceTest {
     private EmotionRecordRepository emotionRecordRepository;
 
     @Mock
-    private CharacterService characterService;
-
-    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     // ── recordEmotion ──
@@ -74,8 +69,6 @@ class EmotionServiceTest {
             assertThat(response.memo()).isEqualTo("기분 좋다");
             assertThat(response.recordedAt()).isEqualTo(
                     LocalDateTime.of(2026, 4, 8, 14, 30));
-
-            verify(characterService).addExp(userId, 5, StatType.DEF);
 
             ArgumentCaptor<EmotionRecordedEvent> captor =
                     ArgumentCaptor.forClass(EmotionRecordedEvent.class);
@@ -142,10 +135,9 @@ class EmotionServiceTest {
             // when & then
             assertThatThrownBy(() -> emotionService.recordEmotion(userId, request))
                     .isInstanceOf(IllegalStateException.class)
-                    .hasMessageContaining("일일 최대 5회");
+                    .hasMessageContaining("최대 5회");
 
             verify(emotionRecordRepository, never()).save(any());
-            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
             verify(eventPublisher, never()).publishEvent(any());
         }
     }

@@ -1,8 +1,5 @@
 package com.brainquest.quest.service;
 
-import com.brainquest.character.dto.UserItemResponse;
-import com.brainquest.character.entity.StatType;
-import com.brainquest.character.service.CharacterService;
 import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
 import com.brainquest.event.events.CheckpointCompletedEvent;
@@ -29,7 +26,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
@@ -48,9 +45,6 @@ class QuestServiceTest {
 
     @Mock
     private ClaudeApiClient claudeApiClient;
-
-    @Mock
-    private CharacterService characterService;
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
@@ -425,8 +419,7 @@ class QuestServiceTest {
             assertThat(res.itemDrop()).isNull();
 
             verify(checkpointRepository).save(cp1);
-            verify(characterService).addExp(1L, 12, StatType.WIS);
-            verify(characterService).addGold(1L, 7);
+            // 경험치/골드는 CheckpointCompletedEvent를 통해 CharacterEventListener에서 처리
             verify(eventPublisher).publishEvent(any(CheckpointCompletedEvent.class));
             verify(eventPublisher, never()).publishEvent(any(QuestCompletedEvent.class));
             verify(questRepository, never()).save(any());
@@ -442,11 +435,8 @@ class QuestServiceTest {
             cp1.complete(); // 이미 완료
             Checkpoint cp2 = addCheckpoint(quest, 11L, 2, 12, 7);
 
-            var mockItemDrop = mock(UserItemResponse.class);
-
             given(questRepository.findByIdWithCheckpoints(1L)).willReturn(Optional.of(quest));
             given(checkpointRepository.findById(11L)).willReturn(Optional.of(cp2));
-            given(characterService.dropItem(1L, "D")).willReturn(mockItemDrop);
 
             // when
             CheckpointCompleteResponse res = questService.completeCheckpoint(1L, 1L, 11L);
@@ -455,15 +445,9 @@ class QuestServiceTest {
             assertThat(res.questCompleted()).isTrue();
             assertThat(res.reward().exp()).isEqualTo(12 + 1);  // cp + remaining
             assertThat(res.reward().gold()).isEqualTo(7 + 1);
-            assertThat(res.itemDrop()).isEqualTo(mockItemDrop);
+            assertThat(res.itemDrop()).isNull(); // 아이템 드롭은 이벤트 리스너에서 처리
 
-            // cp2 보상
-            verify(characterService).addExp(1L, 12, StatType.WIS);
-            verify(characterService).addGold(1L, 7);
-            // 잔여 보상
-            verify(characterService).addExp(1L, 1, StatType.WIS);
-            verify(characterService).addGold(1L, 1);
-            // 이벤트
+            // 이벤트만 발행 (보상은 CharacterEventListener에서 처리)
             verify(eventPublisher).publishEvent(any(CheckpointCompletedEvent.class));
             verify(eventPublisher).publishEvent(any(QuestCompletedEvent.class));
             verify(questRepository).save(quest);
@@ -472,9 +456,9 @@ class QuestServiceTest {
         }
 
         @Test
-        @DisplayName("퀘스트 완료 이벤트에 올바른 값 전달")
+        @DisplayName("퀘스트 완료 이벤트에 잔여 보상 값 전달")
         void questCompletedEvent_correctValues() {
-            // given — 체크포인트 1개짜리 퀘스트 (바로 완료)
+            // given — 체크포인트 1개짜리 퀘스트 (바로 완료), cp 보상 == 퀘스트 보상 → 잔여 = 0
             Quest quest = createQuest(1L, Grade.C, 50, 30);
             setId(quest, 5L);
             Checkpoint cp = addCheckpoint(quest, 20L, 1, 50, 30);
@@ -485,16 +469,16 @@ class QuestServiceTest {
             // when
             questService.completeCheckpoint(1L, 5L, 20L);
 
-            // then
-            ArgumentCaptor<QuestCompletedEvent> captor = ArgumentCaptor.forClass(QuestCompletedEvent.class);
-            verify(eventPublisher).publishEvent(captor.capture());
-
-            QuestCompletedEvent event = captor.getValue();
-            assertThat(event.getUserId()).isEqualTo(1L);
-            assertThat(event.getQuestId()).isEqualTo(5L);
-            assertThat(event.getGrade()).isEqualTo("C");
-            assertThat(event.getExpReward()).isEqualTo(50);
-            assertThat(event.getGoldReward()).isEqualTo(30);
+            // then — CheckpointCompletedEvent + QuestCompletedEvent 둘 다 발행
+            verify(eventPublisher).publishEvent(any(CheckpointCompletedEvent.class));
+            // QuestCompletedEvent는 잔여 보상(0, 0) 전달
+            verify(eventPublisher).publishEvent(argThat(event ->
+                    event instanceof QuestCompletedEvent qe &&
+                    qe.getUserId().equals(1L) &&
+                    qe.getQuestId().equals(5L) &&
+                    qe.getGrade().equals("C") &&
+                    qe.getExpReward() == 0 &&
+                    qe.getGoldReward() == 0));
         }
 
         @Test
@@ -513,12 +497,12 @@ class QuestServiceTest {
             // when
             CheckpointCompleteResponse res = questService.completeCheckpoint(1L, 1L, 11L);
 
-            // then — 잔여 보상 없으므로 addExp/addGold 각 1회만
+            // then — 잔여 보상 없음
             assertThat(res.questCompleted()).isTrue();
             assertThat(res.reward().exp()).isEqualTo(12);
             assertThat(res.reward().gold()).isEqualTo(7);
-            verify(characterService, times(1)).addExp(any(), anyInt(), any());
-            verify(characterService, times(1)).addGold(any(), anyInt());
+            // CheckpointCompletedEvent + QuestCompletedEvent
+            verify(eventPublisher, times(2)).publishEvent(any());
         }
 
         @Test
@@ -536,7 +520,7 @@ class QuestServiceTest {
                     .hasMessageContaining("권한이 없습니다");
 
             verify(checkpointRepository, never()).findById(any());
-            verify(characterService, never()).addExp(any(), anyInt(), any());
+            verify(eventPublisher, never()).publishEvent(any());
         }
 
         @Test
@@ -582,7 +566,7 @@ class QuestServiceTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("퀘스트의 체크포인트가 아닙니다");
 
-            verify(characterService, never()).addExp(any(), anyInt(), any());
+            verify(eventPublisher, never()).publishEvent(any());
         }
 
         @Test
@@ -600,7 +584,7 @@ class QuestServiceTest {
                     .isInstanceOf(DuplicateResourceException.class)
                     .hasMessageContaining("이미 완료된 체크포인트");
 
-            verify(characterService, never()).addExp(any(), anyInt(), any());
+            verify(eventPublisher, never()).publishEvent(any());
         }
     }
 }

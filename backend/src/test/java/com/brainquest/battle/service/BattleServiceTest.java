@@ -9,7 +9,6 @@ import com.brainquest.character.dto.ItemResponse;
 import com.brainquest.character.dto.UserItemResponse;
 import com.brainquest.character.entity.ItemRarity;
 import com.brainquest.character.entity.ItemSlot;
-import com.brainquest.character.entity.StatType;
 import com.brainquest.character.service.CharacterService;
 import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
@@ -558,8 +557,9 @@ class BattleServiceTest {
             assertThat(res.perfectFocus()).isFalse();
             assertThat(res.maxCombo()).isEqualTo(0);
 
-            verify(characterService).addExp(1L, 50, StatType.ATK);
-            verify(characterService).addGold(1L, 25);
+            // 경험치/골드는 BattleCompletedEvent를 통해 CharacterEventListener에서 처리
+            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
+            verify(characterService, never()).addGold(anyLong(), anyInt());
         }
 
         @Test
@@ -656,7 +656,8 @@ class BattleServiceTest {
             assertThat(res.expEarned()).isEqualTo(15);
             assertThat(res.goldEarned()).isEqualTo(0);
 
-            verify(characterService).addExp(1L, 15, StatType.ATK);
+            // 경험치/골드는 이벤트 리스너에서 처리
+            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
             verify(characterService, never()).addGold(anyLong(), anyInt());
             // DEFEAT에서는 아이템 드롭 시도 안 함
             verify(characterService, never()).dropItem(anyLong(), anyString());
@@ -682,8 +683,7 @@ class BattleServiceTest {
             assertThat(res.expEarned()).isEqualTo(0);
             assertThat(res.goldEarned()).isEqualTo(0);
 
-            verify(characterService, never()).addExp(anyLong(), anyInt(), any());
-            verify(characterService, never()).addGold(anyLong(), anyInt());
+            // ABANDON: 아이템 드롭 없음
             verify(characterService, never()).dropItem(anyLong(), anyString());
         }
 
