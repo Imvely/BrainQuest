@@ -7,6 +7,7 @@ export function useQuests(params?: { status?: QuestStatus; category?: QuestCateg
     queryKey: ['quests', params],
     queryFn: () => questApi.getQuests(params),
     select: (res) => res.data,
+    staleTime: 30000,
   });
 }
 

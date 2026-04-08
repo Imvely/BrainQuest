@@ -20,7 +20,7 @@ interface ToastProps {
 
 const TYPE_COLORS = {
   exp: Colors.PRIMARY,
-  gold: '#FDCB6E',
+  gold: Colors.RARITY_LEGENDARY,
   info: Colors.SECONDARY,
   success: Colors.SUCCESS,
 } as const;

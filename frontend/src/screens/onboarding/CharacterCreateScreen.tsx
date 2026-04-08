@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -103,6 +103,35 @@ export default function CharacterCreateScreen() {
   const selectedHairObj = useMemo(() => HAIR_STYLES.find((h) => h.id === selectedHair), [selectedHair]);
   const selectedOutfitObj = useMemo(() => OUTFIT_STYLES.find((o) => o.id === selectedOutfit), [selectedOutfit]);
 
+  const hairKeyExtractor = useCallback((item: typeof HAIR_STYLES[0]) => item.id, []);
+  const outfitKeyExtractor = useCallback((item: typeof OUTFIT_STYLES[0]) => item.id, []);
+
+  const renderHairItem = useCallback(({ item }: { item: typeof HAIR_STYLES[0] }) => (
+    <TouchableOpacity
+      style={[styles.thumbCard, selectedHair === item.id && { borderColor: selectedColor }]}
+      onPress={() => setSelectedHair(item.id)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.thumbEmoji}>{item.emoji}</Text>
+      <Text style={[styles.thumbLabel, selectedHair === item.id && { color: selectedColor }]}>
+        {item.label}
+      </Text>
+    </TouchableOpacity>
+  ), [selectedHair, selectedColor]);
+
+  const renderOutfitItem = useCallback(({ item }: { item: typeof OUTFIT_STYLES[0] }) => (
+    <TouchableOpacity
+      style={[styles.thumbCard, selectedOutfit === item.id && { borderColor: selectedColor }]}
+      onPress={() => setSelectedOutfit(item.id)}
+      activeOpacity={0.7}
+    >
+      <Text style={styles.thumbEmoji}>{item.emoji}</Text>
+      <Text style={[styles.thumbLabel, selectedOutfit === item.id && { color: selectedColor }]}>
+        {item.label}
+      </Text>
+    </TouchableOpacity>
+  ), [selectedOutfit, selectedColor]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -147,19 +176,8 @@ export default function CharacterCreateScreen() {
             data={HAIR_STYLES}
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.thumbCard, selectedHair === item.id && { borderColor: selectedColor }]}
-                onPress={() => setSelectedHair(item.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.thumbEmoji}>{item.emoji}</Text>
-                <Text style={[styles.thumbLabel, selectedHair === item.id && { color: selectedColor }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
+            keyExtractor={hairKeyExtractor}
+            renderItem={renderHairItem}
             contentContainerStyle={styles.thumbList}
           />
         </View>
@@ -171,19 +189,8 @@ export default function CharacterCreateScreen() {
             data={OUTFIT_STYLES}
             horizontal
             showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={[styles.thumbCard, selectedOutfit === item.id && { borderColor: selectedColor }]}
-                onPress={() => setSelectedOutfit(item.id)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.thumbEmoji}>{item.emoji}</Text>
-                <Text style={[styles.thumbLabel, selectedOutfit === item.id && { color: selectedColor }]}>
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            )}
+            keyExtractor={outfitKeyExtractor}
+            renderItem={renderOutfitItem}
             contentContainerStyle={styles.thumbList}
           />
         </View>

@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontFamily: Fonts.REGULAR,
     fontSize: FontSize.MD,
-    color: '#A0A0CC',
+    color: Colors.TEXT_SECONDARY,
   },
   buttonArea: {
     gap: 12,

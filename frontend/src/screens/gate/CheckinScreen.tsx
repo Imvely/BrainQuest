@@ -160,7 +160,7 @@ export default function CheckinScreen() {
             </View>
             <View style={styles.rewardDivider} />
             <View style={styles.rewardItem}>
-              <Text style={[styles.rewardValue, { color: '#FDCB6E' }]}>+{result.reward.gold}</Text>
+              <Text style={[styles.rewardValue, { color: Colors.RARITY_LEGENDARY }]}>+{result.reward.gold}</Text>
               <Text style={styles.rewardLabel}>Gold</Text>
             </View>
           </View>

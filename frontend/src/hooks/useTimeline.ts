@@ -7,6 +7,8 @@ export function useTimeline(date: string) {
     queryKey: ['timeline', date],
     queryFn: () => mapApi.getTimeline(date),
     select: (res) => res.data,
+    staleTime: 30000,
+    refetchInterval: 60000,
   });
 }
 
@@ -17,6 +19,18 @@ export function useCreateTimeBlock() {
     mutationFn: (request: TimeBlockCreateRequest) => mapApi.createTimeBlock(request),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['timeline', variables.blockDate] });
+    },
+  });
+}
+
+export function useUpdateTimeBlock() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, ...request }: Partial<TimeBlockCreateRequest> & { id: number }) =>
+      mapApi.updateTimeBlock(id, request),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
     },
   });
 }

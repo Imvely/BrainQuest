@@ -512,14 +512,13 @@ const styles = StyleSheet.create({
     lineHeight: 26,
   },
   tooltipBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.BG_CARD,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
-    marginTop: 2,
+    marginLeft: 4,
   },
   tooltipIcon: {
     fontFamily: Fonts.BOLD,

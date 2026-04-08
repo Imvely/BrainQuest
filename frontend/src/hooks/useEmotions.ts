@@ -7,6 +7,7 @@ export function useEmotionCalendar(yearMonth: string) {
     queryKey: ['emotionCalendar', yearMonth],
     queryFn: () => skyApi.getEmotionCalendar(yearMonth),
     select: (res) => res.data,
+    staleTime: 60000,
   });
 }
 
@@ -15,6 +16,7 @@ export function useWeeklySummary() {
     queryKey: ['weeklySummary'],
     queryFn: () => skyApi.getWeeklySummary(),
     select: (res) => res.data,
+    staleTime: 60000,
   });
 }
 

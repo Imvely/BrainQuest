@@ -7,6 +7,7 @@ export function useCharacter() {
     queryKey: ['character'],
     queryFn: () => characterApi.getCharacter(),
     select: (res) => res.data,
+    staleTime: 60000,
   });
 }
 

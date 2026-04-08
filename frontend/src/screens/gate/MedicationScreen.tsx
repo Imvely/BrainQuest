@@ -65,7 +65,7 @@ export default function MedicationScreen() {
     fetchMedications();
   }, [fetchMedications]);
 
-  const handleTakeMed = async (med: Medication) => {
+  const handleTakeMed = useCallback(async (med: Medication) => {
     setLoggingId(med.id);
     try {
       await createMedLog({ medicationId: med.id });
@@ -76,7 +76,7 @@ export default function MedicationScreen() {
     } finally {
       setLoggingId(null);
     }
-  };
+  }, []);
 
   const handleAddMed = async () => {
     if (selectedPreset === null) return;
@@ -111,7 +111,7 @@ export default function MedicationScreen() {
     setScheduleTime('08:00');
   };
 
-  const renderMedCard = ({ item }: { item: Medication }) => (
+  const renderMedCard = useCallback(({ item }: { item: Medication }) => (
     <View style={styles.medCard}>
       <View style={styles.medInfo}>
         <Text style={styles.medName}>{item.medName}</Text>
@@ -130,7 +130,7 @@ export default function MedicationScreen() {
         )}
       </TouchableOpacity>
     </View>
-  );
+  ), [loggingId, handleTakeMed]);
 
   return (
     <SafeAreaView style={styles.container}>

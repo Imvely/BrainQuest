@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
@@ -109,17 +109,21 @@ export type MainTabParamList = {
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
-const TabIcon = memo(({ focused }: { focused: boolean }) => (
-  <View style={styles.tabIcon}>
-    <View style={[styles.iconDot, { backgroundColor: focused ? Colors.PRIMARY : Colors.TAB_INACTIVE }]} />
-  </View>
-));
+function TabIcon({ focused }: { focused: boolean; color: string; size: number }) {
+  return (
+    <View style={styles.tabIcon}>
+      <View style={[styles.iconDot, { backgroundColor: focused ? Colors.PRIMARY : Colors.TAB_INACTIVE }]} />
+    </View>
+  );
+}
 
-const BattleTabIcon = memo(({ focused }: { focused: boolean }) => (
-  <View style={styles.battleIcon}>
-    <View style={[styles.iconDot, styles.battleDot, { backgroundColor: focused ? Colors.ACCENT : Colors.TAB_INACTIVE }]} />
-  </View>
-));
+function BattleTabIcon({ focused }: { focused: boolean; color: string; size: number }) {
+  return (
+    <View style={styles.battleIcon}>
+      <View style={[styles.iconDot, styles.battleDot, { backgroundColor: focused ? Colors.ACCENT : Colors.TAB_INACTIVE }]} />
+    </View>
+  );
+}
 
 export default function MainTab() {
   return (
@@ -137,7 +141,7 @@ export default function MainTab() {
         component={MapNavigator}
         options={{
           tabBarLabel: 'MAP',
-          tabBarIcon: TabIcon,
+          tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
       <Tab.Screen
@@ -145,7 +149,7 @@ export default function MainTab() {
         component={QuestNavigator}
         options={{
           tabBarLabel: 'QUEST',
-          tabBarIcon: TabIcon,
+          tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
       <Tab.Screen
@@ -153,7 +157,7 @@ export default function MainTab() {
         component={BattleNavigator}
         options={{
           tabBarLabel: 'BATTLE',
-          tabBarIcon: BattleTabIcon,
+          tabBarIcon: (props) => <BattleTabIcon {...props} />,
         }}
       />
       <Tab.Screen
@@ -161,7 +165,7 @@ export default function MainTab() {
         component={SkyNavigator}
         options={{
           tabBarLabel: 'SKY',
-          tabBarIcon: TabIcon,
+          tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
       <Tab.Screen
@@ -169,7 +173,7 @@ export default function MainTab() {
         component={MoreNavigator}
         options={{
           tabBarLabel: 'MORE',
-          tabBarIcon: TabIcon,
+          tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
     </Tab.Navigator>
