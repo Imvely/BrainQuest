@@ -57,6 +57,7 @@ logs/
 
 # ─── Claude Code ───
 .claude/
+BrainQuest_ClaudeCode_*.md
 
 # ─── 기타 ───
 *.bak
