@@ -1,3 +1,31 @@
+// Mock axios to avoid fetch adapter crash in Expo test environment
+jest.mock('axios', () => {
+  const mockInterceptors = {
+    request: { use: jest.fn(), eject: jest.fn() },
+    response: { use: jest.fn(), eject: jest.fn() },
+  };
+  const mockResponse = { data: { success: true, data: {}, message: '' } };
+  const mockInstance = {
+    get: jest.fn().mockResolvedValue(mockResponse),
+    post: jest.fn().mockResolvedValue(mockResponse),
+    put: jest.fn().mockResolvedValue(mockResponse),
+    delete: jest.fn().mockResolvedValue(mockResponse),
+    patch: jest.fn().mockResolvedValue(mockResponse),
+    interceptors: mockInterceptors,
+    defaults: { headers: { common: {} } },
+  };
+  return {
+    __esModule: true,
+    default: {
+      create: jest.fn(() => mockInstance),
+      get: jest.fn().mockResolvedValue(mockResponse),
+      post: jest.fn().mockResolvedValue(mockResponse),
+      isAxiosError: jest.fn(() => false),
+    },
+    AxiosError: class AxiosError extends Error {},
+  };
+});
+
 // Mock react-native-mmkv
 jest.mock('react-native-mmkv', () => {
   const store = new Map();
@@ -30,6 +58,8 @@ jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
   selectionAsync: jest.fn(),
+  ImpactFeedbackStyle: { Light: 'light', Medium: 'medium', Heavy: 'heavy' },
+  NotificationFeedbackType: { Success: 'success', Warning: 'warning', Error: 'error' },
 }));
 
 jest.mock('expo-notifications', () => ({
@@ -45,10 +75,37 @@ jest.mock('expo-av', () => ({
   },
 }));
 
+// Mock react-native-reanimated (v4 compatible)
 jest.mock('react-native-reanimated', () => {
-  const Reanimated = require('react-native-reanimated/mock');
-  Reanimated.default.call = () => {};
-  return Reanimated;
+  const RN = require('react-native');
+  const AnimatedView = RN.View;
+  const AnimatedText = RN.Text;
+  const AnimatedScrollView = RN.ScrollView;
+  return {
+    __esModule: true,
+    default: {
+      createAnimatedComponent: (component) => component,
+      addWhitelistedNativeProps: jest.fn(),
+      addWhitelistedUIProps: jest.fn(),
+      call: jest.fn(),
+      View: AnimatedView,
+      Text: AnimatedText,
+      ScrollView: AnimatedScrollView,
+    },
+    useSharedValue: (init) => ({ value: init }),
+    useAnimatedStyle: () => ({}),
+    useAnimatedProps: () => ({}),
+    withTiming: (v) => v,
+    withSpring: (v) => v,
+    withDelay: (_, v) => v,
+    withSequence: (...args) => args[args.length - 1],
+    Easing: { out: (fn) => fn, cubic: (v) => v, linear: (v) => v, bezier: () => (v) => v },
+    createAnimatedComponent: (component) => component,
+    runOnJS: (fn) => fn,
+    FadeIn: { duration: () => ({ delay: () => ({}) }) },
+    FadeOut: { duration: () => ({ delay: () => ({}) }) },
+    Layout: {},
+  };
 });
 
 jest.mock('react-native-gesture-handler', () => {
@@ -67,6 +124,25 @@ jest.mock('react-native-gesture-handler', () => {
 });
 
 jest.mock('lottie-react-native', () => 'LottieView');
+
+jest.mock('react-native-view-shot', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const ViewShot = React.forwardRef((props, ref) =>
+    React.createElement(View, { ...props, ref })
+  );
+  ViewShot.displayName = 'ViewShot';
+  return {
+    __esModule: true,
+    default: ViewShot,
+    captureRef: jest.fn().mockResolvedValue('/tmp/test.png'),
+  };
+});
+
+jest.mock('expo-sharing', () => ({
+  isAvailableAsync: jest.fn().mockResolvedValue(true),
+  shareAsync: jest.fn().mockResolvedValue(undefined),
+}));
 
 // Silence console.warn in tests
 const originalWarn = console.warn;

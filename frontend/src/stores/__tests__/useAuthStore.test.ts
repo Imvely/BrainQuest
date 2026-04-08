@@ -22,6 +22,7 @@ describe('useAuthStore', () => {
       user: null,
       isLoggedIn: false,
       hasCharacter: false,
+      isNewUser: true,
       isLoading: true,
     });
   });
@@ -31,6 +32,7 @@ describe('useAuthStore', () => {
     expect(state.user).toBeNull();
     expect(state.isLoggedIn).toBe(false);
     expect(state.hasCharacter).toBe(false);
+    expect(state.isNewUser).toBe(true);
     expect(state.isLoading).toBe(true);
   });
 
@@ -49,6 +51,18 @@ describe('useAuthStore', () => {
       useAuthStore.getState().setHasCharacter(true);
       expect(useAuthStore.getState().hasCharacter).toBe(true);
       expect(storage.getBoolean('hasCharacter')).toBe(true);
+    });
+  });
+
+  describe('setIsNewUser', () => {
+    it('updates isNewUser state and persists to storage', () => {
+      useAuthStore.getState().setIsNewUser(false);
+      expect(useAuthStore.getState().isNewUser).toBe(false);
+      expect(storage.getBoolean('isNewUser')).toBe(false);
+    });
+
+    it('defaults to true', () => {
+      expect(useAuthStore.getState().isNewUser).toBe(true);
     });
   });
 
@@ -72,6 +86,13 @@ describe('useAuthStore', () => {
       useAuthStore.getState().checkAuth();
       expect(useAuthStore.getState().hasCharacter).toBe(true);
     });
+
+    it('reads isNewUser from storage', () => {
+      storage.set('accessToken', 'token');
+      storage.set('isNewUser', false);
+      useAuthStore.getState().checkAuth();
+      expect(useAuthStore.getState().isNewUser).toBe(false);
+    });
   });
 
   describe('logout', () => {
@@ -85,6 +106,7 @@ describe('useAuthStore', () => {
       expect(state.user).toBeNull();
       expect(state.isLoggedIn).toBe(false);
       expect(state.hasCharacter).toBe(false);
+      expect(state.isNewUser).toBe(true);
       expect(storage.getString('accessToken')).toBeUndefined();
       expect(storage.getString('refreshToken')).toBeUndefined();
     });

@@ -1,8 +1,8 @@
 import apiClient from './client';
 import { ApiResponse } from '../types/api';
-import { User, TokenPair, LoginRequest } from '../types/user';
+import { User, TokenPair, LoginRequest, LoginResponse } from '../types/user';
 
-export async function login(request: LoginRequest): Promise<ApiResponse<TokenPair>> {
+export async function login(request: LoginRequest): Promise<ApiResponse<LoginResponse>> {
   const { data } = await apiClient.post('/auth/login', request);
   return data;
 }

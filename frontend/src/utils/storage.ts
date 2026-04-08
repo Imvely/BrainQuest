@@ -6,6 +6,7 @@ const KEYS = {
   ACCESS_TOKEN: 'accessToken',
   REFRESH_TOKEN: 'refreshToken',
   HAS_CHARACTER: 'hasCharacter',
+  IS_NEW_USER: 'isNewUser',
 } as const;
 
 export function getAccessToken(): string | undefined {
@@ -32,6 +33,7 @@ export function setTokens(access: string, refresh: string): void {
 export function clearTokens(): void {
   storage.remove(KEYS.ACCESS_TOKEN);
   storage.remove(KEYS.REFRESH_TOKEN);
+  storage.remove(KEYS.IS_NEW_USER);
 }
 
 export function getHasCharacter(): boolean {
@@ -40,4 +42,12 @@ export function getHasCharacter(): boolean {
 
 export function setHasCharacter(value: boolean): void {
   storage.set(KEYS.HAS_CHARACTER, value);
+}
+
+export function getIsNewUser(): boolean {
+  return storage.getBoolean(KEYS.IS_NEW_USER) ?? true;
+}
+
+export function setIsNewUser(value: boolean): void {
+  storage.set(KEYS.IS_NEW_USER, value);
 }

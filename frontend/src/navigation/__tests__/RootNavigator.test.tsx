@@ -3,7 +3,6 @@ import { render, waitFor } from '@testing-library/react-native';
 import { useAuthStore } from '../../stores/useAuthStore';
 import { storage } from '../../utils/storage';
 
-// Mock navigation - Screen renders its component prop
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   NavigationContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
@@ -32,23 +31,23 @@ describe('RootNavigator', () => {
     storage.clearAll();
   });
 
-  it('returns null while loading (before checkAuth completes)', () => {
-    // Set isLoading=true and override checkAuth to be a no-op
+  it('returns null while loading', () => {
     useAuthStore.setState({
       isLoggedIn: false,
       hasCharacter: false,
+      isNewUser: true,
       isLoading: true,
-      checkAuth: () => {}, // prevent useEffect from changing state
+      checkAuth: () => {},
     });
     const { toJSON } = render(<RootNavigator />);
     expect(toJSON()).toBeNull();
   });
 
   it('shows login screen when not logged in', async () => {
-    // No token in storage → checkAuth sets isLoggedIn=false
     useAuthStore.setState({
       isLoggedIn: false,
       hasCharacter: false,
+      isNewUser: true,
       isLoading: false,
       checkAuth: () => {
         useAuthStore.setState({ isLoggedIn: false, isLoading: false });
@@ -60,19 +59,20 @@ describe('RootNavigator', () => {
     });
   });
 
-  it('shows onboarding when logged in but no character', async () => {
+  it('shows onboarding when logged in but no character (new user)', async () => {
     storage.set('accessToken', 'test-token');
     useAuthStore.setState({
       isLoggedIn: true,
       hasCharacter: false,
+      isNewUser: true,
       isLoading: false,
       checkAuth: () => {
-        useAuthStore.setState({ isLoggedIn: true, hasCharacter: false, isLoading: false });
+        useAuthStore.setState({ isLoggedIn: true, hasCharacter: false, isNewUser: true, isLoading: false });
       },
     });
     const { getByText } = render(<RootNavigator />);
     await waitFor(() => {
-      expect(getByText('ASRS 스크리닝')).toBeTruthy();
+      expect(getByText('시작하기 전에')).toBeTruthy();
     });
   });
 
@@ -82,6 +82,7 @@ describe('RootNavigator', () => {
     useAuthStore.setState({
       isLoggedIn: true,
       hasCharacter: true,
+      isNewUser: false,
       isLoading: false,
       checkAuth: () => {
         useAuthStore.setState({ isLoggedIn: true, hasCharacter: true, isLoading: false });

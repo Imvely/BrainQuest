@@ -26,3 +26,11 @@ export interface LoginRequest {
   email: string;
   nickname: string;
 }
+
+export interface LoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: User;
+  isNewUser: boolean;
+  hasCharacter: boolean;
+}
