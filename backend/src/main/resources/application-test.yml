@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/brainquest_test
+    username: brainquest
+    password: brainquest
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+  flyway:
+    enabled: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+jwt:
+  secret-key: TestSecretKeyForJwtTokenGenerationMustBeAtLeast256BitsLongForTesting!!
+  access-expiration: 900000
+  refresh-expiration: 2592000000

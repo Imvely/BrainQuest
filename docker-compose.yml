@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: brainquest-postgres
+    environment:
+      POSTGRES_DB: brainquest
+      POSTGRES_USER: brainquest
+      POSTGRES_PASSWORD: brainquest
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U brainquest"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: brainquest-valkey
+    ports:
+      - "6379:6379"
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  valkeydata:

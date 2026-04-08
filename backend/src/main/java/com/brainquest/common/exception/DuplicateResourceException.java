@@ -1,0 +1,18 @@
+package com.brainquest.common.exception;
+
+/**
+ * 중복 리소스 생성 시 발생하는 예외.
+ */
+public class DuplicateResourceException extends RuntimeException {
+
+    private final String code;
+
+    public DuplicateResourceException(String code, String message) {
+        super(message);
+        this.code = code;
+    }
+
+    public String getCode() {
+        return code;
+    }
+}
