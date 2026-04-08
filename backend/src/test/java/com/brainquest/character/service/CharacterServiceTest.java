@@ -437,7 +437,7 @@ class CharacterServiceTest {
 
             given(characterRepository.findByUserId(userId)).willReturn(Optional.of(character));
             given(itemRepository.findAllByRarityIn(anyList())).willReturn(List.of(boxItem));
-            given(userRepository.findById(userId)).willReturn(Optional.of(user));
+            given(userRepository.getReferenceById(userId)).willReturn(user);
             given(userItemRepository.save(any(UserItem.class)))
                     .willAnswer(inv -> inv.getArgument(0));
 
@@ -736,7 +736,7 @@ class CharacterServiceTest {
                 User user = createUser(userId);
 
                 given(itemRepository.findAllByRarityIn(anyList())).willReturn(List.of(item));
-                given(userRepository.findById(userId)).willReturn(Optional.of(user));
+                given(userRepository.getReferenceById(userId)).willReturn(user);
                 given(userItemRepository.save(any(UserItem.class)))
                         .willAnswer(inv -> inv.getArgument(0));
 
@@ -753,29 +753,6 @@ class CharacterServiceTest {
         }
 
         @Test
-        @DisplayName("드롭 성공 but 사용자 없음 — EntityNotFoundException")
-        void userNotFound_throwsException() {
-            try (MockedStatic<ThreadLocalRandom> mocked = mockStatic(ThreadLocalRandom.class)) {
-                // given
-                ThreadLocalRandom mockRandom = mock(ThreadLocalRandom.class);
-                mocked.when(ThreadLocalRandom::current).thenReturn(mockRandom);
-                given(mockRandom.nextInt(100)).willReturn(0);
-                given(mockRandom.nextInt(1)).willReturn(0);
-
-                Item item = mockWeapon(1L);
-                given(itemRepository.findAllByRarityIn(anyList())).willReturn(List.of(item));
-                given(userRepository.findById(99L)).willReturn(Optional.empty());
-
-                // when & then
-                assertThatThrownBy(() -> characterService.dropItem(99L, "A"))
-                        .isInstanceOf(EntityNotFoundException.class)
-                        .hasMessageContaining("사용자를 찾을 수 없습니다.");
-
-                verify(userItemRepository, never()).save(any());
-            }
-        }
-
-        @Test
         @DisplayName("등급별 드롭 풀 — E/D는 COMMON+UNCOMMON, B/A는 RARE+EPIC")
         void gradePool_correctRarities() {
             try (MockedStatic<ThreadLocalRandom> mocked = mockStatic(ThreadLocalRandom.class)) {
@@ -788,7 +765,7 @@ class CharacterServiceTest {
                 User user = createUser(1L);
 
                 given(itemRepository.findAllByRarityIn(anyList())).willReturn(List.of(item));
-                given(userRepository.findById(1L)).willReturn(Optional.of(user));
+                given(userRepository.getReferenceById(1L)).willReturn(user);
                 given(userItemRepository.save(any(UserItem.class)))
                         .willAnswer(inv -> inv.getArgument(0));
 

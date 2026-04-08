@@ -85,15 +85,16 @@ brainquest/
 │           ├── V4__create_daily_checkins.sql
 │           ├── V5__create_medications_and_logs.sql
 │           ├── V6__create_streaks.sql
-│           ├── V7__create_items.sql
-│           ├── V8__create_user_items.sql
-│           ├── V9__create_quests.sql
-│           ├── V10__create_checkpoints.sql
-│           ├── V11__create_battle_sessions.sql
-│           ├── V12__create_battle_exits.sql
-│           ├── V13__create_time_blocks.sql
-│           ├── V14__create_time_predictions.sql
-│           └── V15__create_emotion_records.sql
+│           ├── V7__add_streak_version.sql
+│           ├── V8__create_items.sql
+│           ├── V9__create_user_items.sql
+│           ├── V10__create_quests.sql
+│           ├── V11__create_checkpoints.sql
+│           ├── V12__create_battle_sessions.sql
+│           ├── V13__create_battle_exits.sql
+│           ├── V14__create_time_blocks.sql
+│           ├── V15__create_time_predictions.sql
+│           └── V16__create_emotion_records.sql
 ├── frontend/                         # React Native (Expo)
 │   └── src/
 │       ├── screens/
@@ -523,7 +524,7 @@ StreakUpdatedEvent {userId, streakType, currentCount, isBonus}
 - [x] Phase 3: CHARACTER 모듈 (캐릭터, 경험치, 레벨업, 아이템)
 - [x] Phase 4: QUEST 모듈 (AI 퀘스트 변환, 체크포인트, Claude API 연동)
 - [x] Phase 5: BATTLE 모듈 (전투 상태머신, 콤보, 이탈 페널티, 보상)
-- [ ] Phase 6: MAP 모듈 (타임블록 CRUD, 시간 예측, 전환 알림)
+- [x] Phase 6: MAP 모듈 (타임블록 CRUD, 시간 예측, 전환 알림)
 - [ ] Phase 7: SKY 모듈 (감정 기록, 월간 캘린더, 주간 요약)
 - [ ] Phase 8: 이벤트 버스 통합 (모든 모듈 간 이벤트 연동)
 - [ ] Phase 9: 프론트엔드 (화면별 순차 구현)

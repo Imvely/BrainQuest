@@ -94,14 +94,14 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 외부 서비스 연동 오류 (502 Bad Gateway).
-     * <p>소셜 로그인 등 외부 API 호출 실패 시 발생한다.</p>
+     * 잘못된 상태 전이 (409 Conflict).
+     * <p>이미 완료된 작업 재시도 등 비즈니스 상태 불일치 시 발생한다.</p>
      */
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex) {
-        log.error("External service error: {}", ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(ErrorResponse.of("COMMON_502", ex.getMessage()));
+        log.warn("Illegal state: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ErrorResponse.of("COMMON_409", ex.getMessage()));
     }
 
     /**

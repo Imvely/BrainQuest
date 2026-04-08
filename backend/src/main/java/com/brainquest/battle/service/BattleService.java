@@ -240,8 +240,9 @@ public class BattleService {
                 expEarned, goldEarned, itemDrops);
         battleSessionRepository.save(session);
 
-        // 레벨업 감지를 위해 현재 레벨 기록
-        int prevLevel = characterService.getCharacter(userId).level();
+        // 레벨업 감지를 위해 현재 레벨 기록 (DB 조회 1회로 통합)
+        var prevCharacter = characterService.getCharacter(userId);
+        int prevLevel = prevCharacter.level();
 
         // 경험치/골드 지급
         if (expEarned > 0) {
@@ -251,9 +252,12 @@ public class BattleService {
             characterService.addGold(userId, goldEarned);
         }
 
-        // 레벨업 확인
-        int newLevel = characterService.getCharacter(userId).level();
-        Integer levelUp = newLevel > prevLevel ? newLevel : null;
+        // 레벨업 확인 (경험치 지급 후에만 재조회)
+        Integer levelUp = null;
+        if (expEarned > 0) {
+            int newLevel = characterService.getCharacter(userId).level();
+            levelUp = newLevel > prevLevel ? newLevel : null;
+        }
 
         // 스트릭 갱신 (VICTORY만)
         if (req.result() == BattleResult.VICTORY) {

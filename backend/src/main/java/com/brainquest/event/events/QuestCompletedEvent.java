@@ -5,7 +5,13 @@ import org.springframework.context.ApplicationEvent;
 
 /**
  * 퀘스트 완료 이벤트.
- * <p>발행: QUEST → 구독: CHARACTER(WIS 경험치 + 아이템 드롭), MAP(타임블록 완료)</p>
+ *
+ * <p>발행: QUEST</p>
+ * <p>구독: MAP(타임블록 자동 완료)</p>
+ *
+ * <p><b>중복 지급 주의:</b> 경험치/골드/아이템 드롭은 {@code QuestService}가
+ * {@code CharacterService}를 직접 호출하여 지급한다.
+ * 이 이벤트를 구독하는 리스너에서 경험치를 추가 지급하면 중복 발생.</p>
  */
 @Getter
 public class QuestCompletedEvent extends ApplicationEvent {

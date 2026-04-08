@@ -205,11 +205,11 @@ public class CharacterService {
 
         Item selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("CHAR_004", "사용자를 찾을 수 없습니다."));
+        // getReferenceById: 프록시만 생성하여 불필요한 SELECT 방지
+        User userRef = userRepository.getReferenceById(userId);
 
         UserItem userItem = UserItem.builder()
-                .user(user)
+                .user(userRef)
                 .item(selected)
                 .source("BATTLE_DROP")
                 .build();
@@ -292,11 +292,11 @@ public class CharacterService {
 
         Item selected = candidates.get(ThreadLocalRandom.current().nextInt(candidates.size()));
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("CHAR_004", "사용자를 찾을 수 없습니다."));
+        // getReferenceById: 프록시만 생성하여 불필요한 SELECT 방지
+        User userRef = userRepository.getReferenceById(userId);
 
         UserItem userItem = UserItem.builder()
-                .user(user)
+                .user(userRef)
                 .item(selected)
                 .source("LEVEL_UP")
                 .build();

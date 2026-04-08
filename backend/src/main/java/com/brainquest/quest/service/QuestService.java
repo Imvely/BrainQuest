@@ -3,6 +3,7 @@ package com.brainquest.quest.service;
 import com.brainquest.character.dto.UserItemResponse;
 import com.brainquest.character.entity.StatType;
 import com.brainquest.character.service.CharacterService;
+import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
 import com.brainquest.event.events.CheckpointCompletedEvent;
 import com.brainquest.event.events.QuestCompletedEvent;
@@ -173,7 +174,7 @@ public class QuestService {
         }
 
         if (checkpoint.getStatus() == CheckpointStatus.COMPLETED) {
-            throw new IllegalStateException("이미 완료된 체크포인트입니다.");
+            throw new DuplicateResourceException("QUEST_004", "이미 완료된 체크포인트입니다.");
         }
 
         // 체크포인트 완료

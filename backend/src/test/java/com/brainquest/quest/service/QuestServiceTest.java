@@ -3,6 +3,7 @@ package com.brainquest.quest.service;
 import com.brainquest.character.dto.UserItemResponse;
 import com.brainquest.character.entity.StatType;
 import com.brainquest.character.service.CharacterService;
+import com.brainquest.common.exception.DuplicateResourceException;
 import com.brainquest.common.exception.EntityNotFoundException;
 import com.brainquest.event.events.CheckpointCompletedEvent;
 import com.brainquest.event.events.QuestCompletedEvent;
@@ -585,7 +586,7 @@ class QuestServiceTest {
         }
 
         @Test
-        @DisplayName("이미 완료된 체크포인트 — IllegalStateException")
+        @DisplayName("이미 완료된 체크포인트 — DuplicateResourceException")
         void alreadyCompleted() {
             Quest quest = createQuest(1L, Grade.D, 25, 15);
             setId(quest, 1L);
@@ -596,7 +597,7 @@ class QuestServiceTest {
             given(checkpointRepository.findById(10L)).willReturn(Optional.of(cp));
 
             assertThatThrownBy(() -> questService.completeCheckpoint(1L, 1L, 10L))
-                    .isInstanceOf(IllegalStateException.class)
+                    .isInstanceOf(DuplicateResourceException.class)
                     .hasMessageContaining("이미 완료된 체크포인트");
 
             verify(characterService, never()).addExp(any(), anyInt(), any());
