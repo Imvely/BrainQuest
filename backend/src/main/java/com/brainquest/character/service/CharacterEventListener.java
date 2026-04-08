@@ -45,8 +45,13 @@ public class CharacterEventListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleCheckinCompleted(CheckinCompletedEvent event) {
-        log.debug("체크인 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
-        characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        try {
+            log.debug("체크인 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
+            characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        } catch (Exception e) {
+            log.error("체크인 경험치 지급 실패: userId={}, exp={}",
+                    event.getUserId(), event.getExpReward(), e);
+        }
     }
 
     /**
@@ -54,8 +59,13 @@ public class CharacterEventListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleScreeningCompleted(ScreeningCompletedEvent event) {
-        log.debug("스크리닝 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
-        characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        try {
+            log.debug("스크리닝 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
+            characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        } catch (Exception e) {
+            log.error("스크리닝 경험치 지급 실패: userId={}, exp={}",
+                    event.getUserId(), event.getExpReward(), e);
+        }
     }
 
     /**
@@ -63,8 +73,13 @@ public class CharacterEventListener {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMedLogCompleted(MedLogCompletedEvent event) {
-        log.debug("복용 기록 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
-        characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        try {
+            log.debug("복용 기록 경험치 지급: userId={}, exp={}", event.getUserId(), event.getExpReward());
+            characterService.addExp(event.getUserId(), event.getExpReward(), StatType.HP);
+        } catch (Exception e) {
+            log.error("복용 기록 경험치 지급 실패: userId={}, exp={}",
+                    event.getUserId(), event.getExpReward(), e);
+        }
     }
 
     /**
@@ -80,8 +95,13 @@ public class CharacterEventListener {
         if (bonusExp == null) {
             return;
         }
-        log.info("스트릭 보너스 지급: userId={}, count={}, exp={}",
-                event.getUserId(), event.getCurrentCount(), bonusExp);
-        characterService.addExp(event.getUserId(), bonusExp, StatType.HP);
+        try {
+            log.info("스트릭 보너스 지급: userId={}, count={}, exp={}",
+                    event.getUserId(), event.getCurrentCount(), bonusExp);
+            characterService.addExp(event.getUserId(), bonusExp, StatType.HP);
+        } catch (Exception e) {
+            log.error("스트릭 보너스 경험치 지급 실패: userId={}, count={}, exp={}",
+                    event.getUserId(), event.getCurrentCount(), bonusExp, e);
+        }
     }
 }

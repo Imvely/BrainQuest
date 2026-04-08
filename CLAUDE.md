@@ -525,7 +525,7 @@ StreakUpdatedEvent {userId, streakType, currentCount, isBonus}
 - [x] Phase 4: QUEST 모듈 (AI 퀘스트 변환, 체크포인트, Claude API 연동)
 - [x] Phase 5: BATTLE 모듈 (전투 상태머신, 콤보, 이탈 페널티, 보상)
 - [x] Phase 6: MAP 모듈 (타임블록 CRUD, 시간 예측, 전환 알림)
-- [ ] Phase 7: SKY 모듈 (감정 기록, 월간 캘린더, 주간 요약)
+- [x] Phase 7: SKY 모듈 (감정 기록, 월간 캘린더, 주간 요약)
 - [ ] Phase 8: 이벤트 버스 통합 (모든 모듈 간 이벤트 연동)
 - [ ] Phase 9: 프론트엔드 (화면별 순차 구현)
 - [ ] Phase 10: 통합 테스트 + 버그 수정 + 출시

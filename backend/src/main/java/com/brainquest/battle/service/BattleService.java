@@ -144,6 +144,13 @@ public class BattleService {
             int recoverAmount = (int) (session.getMonsterMaxHp() * 0.1);
             session.recoverMonsterHp(recoverAmount);
             log.debug("몬스터 HP 회복: +{}, remaining={}", recoverAmount, session.getMonsterRemainingHp());
+        } else if (penalty == PenaltyType.HP_DAMAGE) {
+            // 60~120초: 몬스터 HP 20% 회복, 120~300초: 몬스터 HP 50% 회복
+            double recoverRate = durationSec <= 120 ? 0.2 : 0.5;
+            int recoverAmount = (int) (session.getMonsterMaxHp() * recoverRate);
+            session.recoverMonsterHp(recoverAmount);
+            log.debug("HP_DAMAGE 페널티: 몬스터 HP {}% 회복 (+{}), remaining={}",
+                    (int) (recoverRate * 100), recoverAmount, session.getMonsterRemainingHp());
         } else if (penalty == PenaltyType.DEFEAT) {
             // >300초: 자동 패배 처리
             exit.recordReturn(now, durationSec, PenaltyType.DEFEAT);

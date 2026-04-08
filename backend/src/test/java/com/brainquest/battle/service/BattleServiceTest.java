@@ -424,10 +424,11 @@ class BattleServiceTest {
         }
 
         @Test
-        @DisplayName("61~300초 이탈 → HP_DAMAGE")
-        void between61and300_hpDamage() {
+        @DisplayName("61~120초 이탈 → HP_DAMAGE, 몬스터 HP 20% 회복")
+        void between61and120_hpDamage_20percent() {
             BattleSession session = createSession(1L, 25, "오크", 600);
-            BattleExit exit = createExit(1L, LocalDateTime.now().minusSeconds(120));
+            ReflectionTestUtils.setField(session, "monsterRemainingHp", 300);
+            BattleExit exit = createExit(1L, LocalDateTime.now().minusSeconds(90));
 
             given(battleSessionRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(session));
             given(battleExitRepository.findFirstBySessionIdAndReturnAtIsNullOrderByExitAtDesc(1L))
@@ -438,7 +439,28 @@ class BattleServiceTest {
             ReturnResponse res = battleService.recordReturn(1L, 1L);
 
             assertThat(res.penaltyType()).isEqualTo(PenaltyType.HP_DAMAGE);
-            assertThat(res.durationSec()).isBetween(119, 122);
+            // 300 + 120 (600 * 0.2) = 420
+            assertThat(res.monsterRemainingHp()).isEqualTo(420);
+        }
+
+        @Test
+        @DisplayName("121~300초 이탈 → HP_DAMAGE, 몬스터 HP 50% 회복")
+        void between121and300_hpDamage_50percent() {
+            BattleSession session = createSession(1L, 25, "오크", 600);
+            ReflectionTestUtils.setField(session, "monsterRemainingHp", 200);
+            BattleExit exit = createExit(1L, LocalDateTime.now().minusSeconds(200));
+
+            given(battleSessionRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(session));
+            given(battleExitRepository.findFirstBySessionIdAndReturnAtIsNullOrderByExitAtDesc(1L))
+                    .willReturn(Optional.of(exit));
+            stubSaveExit();
+            stubSaveSession();
+
+            ReturnResponse res = battleService.recordReturn(1L, 1L);
+
+            assertThat(res.penaltyType()).isEqualTo(PenaltyType.HP_DAMAGE);
+            // 200 + 300 (600 * 0.5) = 500
+            assertThat(res.monsterRemainingHp()).isEqualTo(500);
         }
 
         @Test

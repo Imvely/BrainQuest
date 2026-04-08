@@ -13,6 +13,8 @@ import com.brainquest.map.repository.TimeBlockRepository;
 import com.brainquest.quest.entity.Quest;
 import com.brainquest.quest.entity.QuestStatus;
 import com.brainquest.quest.repository.QuestRepository;
+import com.brainquest.sky.entity.EmotionRecord;
+import com.brainquest.sky.repository.EmotionRecordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,6 +36,7 @@ public class TimeBlockService {
     private final UserRepository userRepository;
     private final QuestRepository questRepository;
     private final BattleSessionRepository battleSessionRepository;
+    private final EmotionRecordRepository emotionRecordRepository;
 
     @Transactional
     public BlockResponse createBlock(Long userId, CreateBlockRequest req) {
@@ -128,8 +131,16 @@ public class TimeBlockService {
         // 남은 시간
         int remainingMin = calculateRemainingMin(userId);
 
-        // 감정 기록 (SKY 모듈 미구현 → 빈 리스트)
-        List<TimelineResponse.EmotionSummary> emotionRecords = List.of();
+        // 감정 기록 (SKY 모듈 연동)
+        List<EmotionRecord> emotions = emotionRecordRepository
+                .findAllByUserIdAndRecordedAtBetweenOrderByRecordedAt(userId, dayStart, dayEnd);
+        List<TimelineResponse.EmotionSummary> emotionRecords = emotions.stream()
+                .map(e -> new TimelineResponse.EmotionSummary(
+                        e.getId(),
+                        e.getWeatherType().name(),
+                        e.getIntensity(),
+                        e.getMemo()))
+                .toList();
 
         return new TimelineResponse(
                 blockResponses,

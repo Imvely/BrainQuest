@@ -69,9 +69,13 @@ public class ScreeningService {
             throw new IllegalArgumentException("answers는 비어있을 수 없습니다.");
         }
         for (var entry : request.answers().entrySet()) {
+            String key = entry.getKey();
+            if (key == null || key.length() > 10 || !key.matches("^q\\d+$")) {
+                throw new IllegalArgumentException("유효하지 않은 질문 키입니다.");
+            }
             if (entry.getValue() == null || entry.getValue() < 0 || entry.getValue() > 4) {
                 throw new IllegalArgumentException(
-                        entry.getKey() + "의 값은 0~4 범위여야 합니다.");
+                        key + "의 값은 0~4 범위여야 합니다.");
             }
         }
     }

@@ -14,6 +14,7 @@ import com.brainquest.quest.entity.Grade;
 import com.brainquest.quest.entity.Quest;
 import com.brainquest.quest.entity.QuestCategory;
 import com.brainquest.quest.repository.QuestRepository;
+import com.brainquest.sky.repository.EmotionRecordRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -54,6 +55,9 @@ class TimeBlockServiceTest {
 
     @Mock
     private BattleSessionRepository battleSessionRepository;
+
+    @Mock
+    private EmotionRecordRepository emotionRecordRepository;
 
     // ── 헬퍼 메서드 ──
 
