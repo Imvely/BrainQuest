@@ -11,19 +11,19 @@ import java.util.List;
 
 /**
  * CORS 설정.
- * <p>application.yml의 cors.allowed-origins로 허용 Origin을 제어한다.
- * 개발 환경에서는 localhost를 허용하고, 프로덕션에서는 실제 도메인만 허용한다.</p>
+ * <p>application.yml의 cors.allowed-origin-patterns로 허용 Origin 패턴을 제어한다.
+ * 개발 환경에서는 localhost:* 를 허용하고, 프로덕션에서는 실제 도메인만 허용한다.</p>
  */
 @Configuration
 public class CorsConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:3000,http://localhost:8081,http://localhost:19006}")
-    private List<String> allowedOrigins;
+    @Value("${cors.allowed-origin-patterns:http://localhost:*}")
+    private List<String> allowedOriginPatterns;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(allowedOrigins);
+        config.setAllowedOriginPatterns(allowedOriginPatterns);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Requested-With"));
         config.setAllowCredentials(true);

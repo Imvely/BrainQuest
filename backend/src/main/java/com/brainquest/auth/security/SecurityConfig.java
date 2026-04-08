@@ -18,6 +18,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.core.env.Environment;
 
 /**
  * Spring Security 설정.
@@ -37,6 +38,7 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CorsConfigurationSource corsConfigurationSource;
     private final ObjectMapper objectMapper;
+    private final Environment environment;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -48,14 +50,39 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint(authenticationEntryPoint())
                         .accessDeniedHandler(accessDeniedHandler()))
-                .authorizeHttpRequests(auth -> auth
+                .authorizeHttpRequests(auth -> {
+                    auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("/actuator/health").permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers("/actuator/health").permitAll();
+
+                    // DEV 전용: GET API를 인증 없이 허용 (프론트엔드 개발 편의)
+                    // TODO: [운영 배포 전] 이 블록 제거 — Phase 10에서 반드시 삭제할 것
+                    if (isDevProfile()) {
+                        auth.requestMatchers(
+                                org.springframework.http.HttpMethod.GET,
+                                "/api/v1/map/**",
+                                "/api/v1/quest/**",
+                                "/api/v1/character/**",
+                                "/api/v1/sky/**",
+                                "/api/v1/gate/streaks",
+                                "/api/v1/gate/checkin/history",
+                                "/api/v1/battle/history"
+                        ).permitAll();
+                    }
+
+                    auth.anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private boolean isDevProfile() {
+        for (String profile : environment.getActiveProfiles()) {
+            if ("dev".equals(profile)) return true;
+        }
+        return false;
     }
 
     /**
