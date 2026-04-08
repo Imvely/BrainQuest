@@ -522,7 +522,7 @@ StreakUpdatedEvent {userId, streakType, currentCount, isBonus}
 - [x] Phase 2: GATE 모듈 (스크리닝, 체크인, 약물, 스트릭)
 - [x] Phase 3: CHARACTER 모듈 (캐릭터, 경험치, 레벨업, 아이템)
 - [x] Phase 4: QUEST 모듈 (AI 퀘스트 변환, 체크포인트, Claude API 연동)
-- [ ] Phase 5: BATTLE 모듈 (전투 상태머신, 콤보, 이탈 페널티, 보상)
+- [x] Phase 5: BATTLE 모듈 (전투 상태머신, 콤보, 이탈 페널티, 보상)
 - [ ] Phase 6: MAP 모듈 (타임블록 CRUD, 시간 예측, 전환 알림)
 - [ ] Phase 7: SKY 모듈 (감정 기록, 월간 캘린더, 주간 요약)
 - [ ] Phase 8: 이벤트 버스 통합 (모든 모듈 간 이벤트 연동)

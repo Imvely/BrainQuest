@@ -46,6 +46,7 @@ public class ClaudeApiClient {
     private final ObjectMapper objectMapper;
     private final String model;
     private final int maxTokens;
+    private final int timeoutSec;
 
     public ClaudeApiClient(
             @Value("${claude.api-key:}") String apiKey,
@@ -56,6 +57,7 @@ public class ClaudeApiClient {
             ObjectMapper objectMapper) {
         this.model = model;
         this.maxTokens = maxTokens;
+        this.timeoutSec = timeoutSec;
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.webClient = WebClient.builder()
@@ -91,7 +93,7 @@ public class ClaudeApiClient {
                     .bodyValue(requestBody)
                     .retrieve()
                     .bodyToMono(String.class)
-                    .timeout(Duration.ofSeconds(30))
+                    .timeout(Duration.ofSeconds(timeoutSec))
                     .block();
 
             incrementRateLimit(userId);
@@ -143,8 +145,11 @@ public class ClaudeApiClient {
             throw new IllegalStateException("Claude API 응답에 content가 없습니다.");
         }
 
-        String text = contentArray.get(0).get("text").asText();
-        return objectMapper.readValue(text, QuestGenerationResult.class);
+        var textNode = contentArray.get(0).get("text");
+        if (textNode == null) {
+            throw new IllegalStateException("Claude API 응답의 content[0]에 text 필드가 없습니다.");
+        }
+        return objectMapper.readValue(textNode.asText(), QuestGenerationResult.class);
     }
 
     /**

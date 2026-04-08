@@ -261,12 +261,12 @@ public class QuestService {
      * <p>마지막 체크포인트는 +20% 보너스.</p>
      */
     private List<CheckpointResponse> distributeCheckpointRewards(
-            List<? extends Object> checkpointDataList, int totalExp, int totalGold) {
+            List<QuestGenerationResult.CheckpointData> checkpointDataList,
+            int totalExp, int totalGold) {
 
         int size = checkpointDataList.size();
         if (size == 0) return List.of();
 
-        // 기본 분배: 전체 / 체크포인트 수
         int baseExp = totalExp / size;
         int baseGold = totalGold / size;
 
@@ -281,20 +281,10 @@ public class QuestService {
                 cpGold = (int) (baseGold * 1.2);
             }
 
-            Object data = checkpointDataList.get(i);
-            String title;
-            int estMin;
-            if (data instanceof QuestGenerationResult.CheckpointData cpd) {
-                title = cpd.title();
-                estMin = cpd.estimatedMin();
-            } else {
-                // Should not happen
-                title = "체크포인트 " + (i + 1);
-                estMin = 10;
-            }
-
+            QuestGenerationResult.CheckpointData cpd = checkpointDataList.get(i);
             responses.add(new CheckpointResponse(
-                    null, i + 1, title, estMin, cpExp, cpGold, CheckpointStatus.PENDING, null));
+                    null, i + 1, cpd.title(), cpd.estimatedMin(),
+                    cpExp, cpGold, CheckpointStatus.PENDING, null));
         }
         return responses;
     }

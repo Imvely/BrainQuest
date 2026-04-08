@@ -6,6 +6,7 @@ import com.brainquest.event.events.MorningCheckinEvent;
 import com.brainquest.event.events.StreakUpdatedEvent;
 import com.brainquest.gate.dto.CheckinRequest;
 import com.brainquest.gate.dto.CheckinResponse;
+import com.brainquest.gate.dto.StreakResponse;
 import com.brainquest.gate.entity.CheckinType;
 import com.brainquest.gate.entity.DailyCheckin;
 import com.brainquest.gate.entity.Streak;
@@ -107,6 +108,15 @@ public class CheckinService {
                 new CheckinCompletedEvent(this, userId, CheckinType.EVENING, CHECKIN_EXP));
 
         return CheckinResponse.of(checkin, streakCount, CHECKIN_EXP);
+    }
+
+    /**
+     * 사용자의 전체 스트릭을 조회한다.
+     */
+    public List<StreakResponse> getStreaks(Long userId) {
+        return streakRepository.findAllByUserId(userId).stream()
+                .map(StreakResponse::from)
+                .toList();
     }
 
     /**

@@ -6,7 +6,6 @@ import com.brainquest.gate.entity.CheckinType;
 import com.brainquest.gate.service.CheckinService;
 import com.brainquest.gate.service.MedicationService;
 import com.brainquest.gate.service.ScreeningService;
-import com.brainquest.gate.repository.StreakRepository;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -29,7 +28,6 @@ public class GateController {
     private final ScreeningService screeningService;
     private final CheckinService checkinService;
     private final MedicationService medicationService;
-    private final StreakRepository streakRepository;
 
     /**
      * ASRS 스크리닝 제출.
@@ -95,9 +93,7 @@ public class GateController {
     @GetMapping("/streaks")
     public ResponseEntity<ApiResponse<List<StreakResponse>>> getStreaks(
             @AuthenticationPrincipal Long userId) {
-        List<StreakResponse> streaks = streakRepository.findAllByUserId(userId).stream()
-                .map(StreakResponse::from)
-                .toList();
+        List<StreakResponse> streaks = checkinService.getStreaks(userId);
         return ResponseEntity.ok(ApiResponse.of(streaks));
     }
 }
