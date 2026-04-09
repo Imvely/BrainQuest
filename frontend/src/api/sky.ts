@@ -16,3 +16,8 @@ export async function getWeeklySummary(): Promise<ApiResponse<WeeklySummary>> {
   const { data } = await apiClient.get('/sky/summary/weekly');
   return data;
 }
+
+export async function getEmotionsByDate(date: string): Promise<ApiResponse<EmotionRecord[]>> {
+  const { data } = await apiClient.get('/sky/emotions', { params: { date } });
+  return data;
+}

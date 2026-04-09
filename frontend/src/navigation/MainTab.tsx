@@ -72,8 +72,8 @@ const SkyStack = createStackNavigator<SkyStackParamList>();
 function SkyNavigator() {
   return (
     <SkyStack.Navigator screenOptions={{ headerShown: false }}>
-      <SkyStack.Screen name="EmotionRecord" component={EmotionRecordScreen} />
       <SkyStack.Screen name="EmotionCalendar" component={EmotionCalendarScreen} />
+      <SkyStack.Screen name="EmotionRecord" component={EmotionRecordScreen} />
       <SkyStack.Screen name="WeeklySummary" component={WeeklySummaryScreen} />
     </SkyStack.Navigator>
   );
@@ -141,6 +141,7 @@ export default function MainTab() {
         component={MapNavigator}
         options={{
           tabBarLabel: 'MAP',
+          tabBarAccessibilityLabel: '타임라인',
           tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
@@ -149,6 +150,7 @@ export default function MainTab() {
         component={QuestNavigator}
         options={{
           tabBarLabel: 'QUEST',
+          tabBarAccessibilityLabel: '퀘스트',
           tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
@@ -157,6 +159,7 @@ export default function MainTab() {
         component={BattleNavigator}
         options={{
           tabBarLabel: 'BATTLE',
+          tabBarAccessibilityLabel: '전투',
           tabBarIcon: (props) => <BattleTabIcon {...props} />,
         }}
       />
@@ -165,6 +168,7 @@ export default function MainTab() {
         component={SkyNavigator}
         options={{
           tabBarLabel: 'SKY',
+          tabBarAccessibilityLabel: '감정 날씨',
           tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />
@@ -173,6 +177,7 @@ export default function MainTab() {
         component={MoreNavigator}
         options={{
           tabBarLabel: 'MORE',
+          tabBarAccessibilityLabel: '더보기',
           tabBarIcon: (props) => <TabIcon {...props} />,
         }}
       />

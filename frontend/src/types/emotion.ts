@@ -37,5 +37,6 @@ export interface WeeklySummary {
   avgIntensity: number;
   totalRecords: number;
   weatherDistribution: Record<WeatherType, number>;
+  comparedToLastWeek?: Record<WeatherType, number>;
   topTags: string[];
 }
