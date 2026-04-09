@@ -104,7 +104,7 @@ describe('RootNavigator', () => {
     });
   });
 
-  it('renders level badge and action buttons', async () => {
+  it('renders action buttons on MainTab', async () => {
     useAuthStore.setState({
       isLoggedIn: true,
       hasCharacter: true,
@@ -114,9 +114,7 @@ describe('RootNavigator', () => {
     });
     const { getByText } = renderWithProviders(<RootNavigator />);
     await waitFor(() => {
-      expect(getByText('Lv.1')).toBeTruthy();
-      expect(getByText('체크인')).toBeTruthy();
-      expect(getByText('감정 기록')).toBeTruthy();
+      expect(getByText('전투 시작')).toBeTruthy();
     });
   });
 });

@@ -159,6 +159,7 @@ export default function MedicationScreen() {
           data={medications}
           renderItem={renderMedCard}
           keyExtractor={(item) => String(item.id)}
+          getItemLayout={(_, index) => ({ length: 88, offset: 88 * index, index })}
           contentContainerStyle={styles.listContent}
           removeClippedSubviews
           maxToRenderPerBatch={10}

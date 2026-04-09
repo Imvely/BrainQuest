@@ -221,6 +221,7 @@ export default function TimelineScreen() {
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => String(item.id)}
+              getItemLayout={(_, index) => ({ length: 190, offset: 190 * index, index })}
               contentContainerStyle={styles.questList}
               renderItem={({ item }) => <QuestMiniCard quest={item} />}
               style={styles.questFlatList}

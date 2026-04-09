@@ -1,17 +1,20 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EmotionCalendarScreen from '../EmotionCalendarScreen';
 import { EmotionCalendarDay, WeeklySummary } from '../../../types/emotion';
 
-// --- Navigation mock ---
+// ---------------------------------------------------------------------------
+// Navigation mock
+// ---------------------------------------------------------------------------
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
 }));
 
-// --- Hook mocks ---
+// ---------------------------------------------------------------------------
+// Hook mocks
+// ---------------------------------------------------------------------------
 const mockCalendarData: EmotionCalendarDay[] = [
   { date: '2026-04-01', weatherType: 'SUNNY', avgIntensity: 4, count: 2 },
   { date: '2026-04-02', weatherType: 'RAIN', avgIntensity: 3, count: 1 },
@@ -24,8 +27,24 @@ const mockWeeklySummary: WeeklySummary = {
   dominantWeather: 'SUNNY',
   avgIntensity: 3.5,
   totalRecords: 5,
-  weatherDistribution: { SUNNY: 3, RAIN: 1, CLOUDY: 1, PARTLY_CLOUDY: 0, FOG: 0, THUNDER: 0, STORM: 0 },
-  comparedToLastWeek: { SUNNY: 1, RAIN: -1, CLOUDY: 0, PARTLY_CLOUDY: 0, FOG: 0, THUNDER: 0, STORM: 0 },
+  weatherDistribution: {
+    SUNNY: 3,
+    RAIN: 1,
+    CLOUDY: 1,
+    PARTLY_CLOUDY: 0,
+    FOG: 0,
+    THUNDER: 0,
+    STORM: 0,
+  },
+  comparedToLastWeek: {
+    SUNNY: 1,
+    RAIN: -1,
+    CLOUDY: 0,
+    PARTLY_CLOUDY: 0,
+    FOG: 0,
+    THUNDER: 0,
+    STORM: 0,
+  },
   topTags: ['피곤', '운동후'],
 };
 
@@ -35,30 +54,79 @@ jest.mock('../../../hooks/useEmotions', () => ({
   useEmotionsByDate: () => ({ data: null }),
 }));
 
-// --- Helpers ---
-function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
-}
-
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 describe('EmotionCalendarScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('renders month title with current date', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
+  // 1. Renders month display with year and month
+  it('renders month display with current year and month', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
     const now = new Date();
     const expected = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
     expect(getByText(expected)).toBeTruthy();
   });
 
-  it('renders weekday headers', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
+  // 2. Shows < and > navigation buttons
+  it('shows < and > navigation buttons', () => {
+    const { getAllByText } = render(<EmotionCalendarScreen />);
+    const leftArrows = getAllByText('<');
+    const rightArrows = getAllByText('>');
+    expect(leftArrows.length).toBeGreaterThan(0);
+    expect(rightArrows.length).toBeGreaterThan(0);
+  });
+
+  // 3. Tapping > advances to next month
+  it('tapping > advances to next month', () => {
+    const { getAllByText, getByText } = render(<EmotionCalendarScreen />);
+    const now = new Date();
+    const rightArrow = getAllByText('>')[0];
+    fireEvent.press(rightArrow);
+
+    const nextMonth = now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2;
+    const nextYear =
+      now.getMonth() + 2 > 12 ? now.getFullYear() + 1 : now.getFullYear();
+    expect(getByText(`${nextYear}년 ${nextMonth}월`)).toBeTruthy();
+  });
+
+  // 4. Tapping < goes to previous month
+  it('tapping < goes to previous month', () => {
+    const { getAllByText, getByText } = render(<EmotionCalendarScreen />);
+    const now = new Date();
+    const leftArrow = getAllByText('<')[0];
+    fireEvent.press(leftArrow);
+
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth();
+    const prevYear =
+      now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    expect(getByText(`${prevYear}년 ${prevMonth}월`)).toBeTruthy();
+  });
+
+  // 5. Shows FAB (+) button for new emotion record
+  it('shows FAB (+) button', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
+    expect(getByText('+')).toBeTruthy();
+  });
+
+  // 6. FAB navigates to EmotionRecord
+  it('FAB navigates to EmotionRecord when pressed', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
+    fireEvent.press(getByText('+'));
+    expect(mockNavigate).toHaveBeenCalledWith('EmotionRecord');
+  });
+
+  // 7. Shows share button "이번 달 감정 날씨 공유"
+  it('shows "이번 달 감정 날씨 공유" share button', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
+    expect(getByText('이번 달 감정 날씨 공유')).toBeTruthy();
+  });
+
+  // 8. WeatherCalendar component renders (weekday headers present)
+  it('renders WeatherCalendar with weekday headers', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
     expect(getByText('일')).toBeTruthy();
     expect(getByText('월')).toBeTruthy();
     expect(getByText('화')).toBeTruthy();
@@ -68,51 +136,54 @@ describe('EmotionCalendarScreen', () => {
     expect(getByText('토')).toBeTruthy();
   });
 
-  it('renders month navigation arrows', () => {
-    const { getAllByText } = renderWithProviders(<EmotionCalendarScreen />);
-    const arrows = getAllByText('<');
-    expect(arrows.length).toBeGreaterThan(0);
-  });
-
-  it('navigates months with arrows', () => {
-    const { getAllByText, getByText } = renderWithProviders(<EmotionCalendarScreen />);
-    const now = new Date();
-
-    // Press next month
-    const rightArrow = getAllByText('>')[0];
-    fireEvent.press(rightArrow);
-    const nextMonth = now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2;
-    const nextYear = now.getMonth() + 2 > 12 ? now.getFullYear() + 1 : now.getFullYear();
-    expect(getByText(`${nextYear}년 ${nextMonth}월`)).toBeTruthy();
-  });
-
-  it('renders weekly summary card', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
+  // 9. Renders weekly summary card
+  it('renders weekly summary card with title', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
     expect(getByText('이번 주 감정 날씨')).toBeTruthy();
-    expect(getByText('3일')).toBeTruthy(); // SUNNY count
-    expect(getByText('공유하기')).toBeTruthy();
   });
 
+  // 10. Renders top tags in weekly summary
   it('renders top tags in weekly summary', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
+    const { getByText } = render(<EmotionCalendarScreen />);
     expect(getByText('#피곤')).toBeTruthy();
     expect(getByText('#운동후')).toBeTruthy();
   });
 
-  it('renders monthly share link', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
-    expect(getByText('이번 달 감정 날씨 공유')).toBeTruthy();
-  });
-
-  it('renders FAB button that navigates to EmotionRecord', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
-    const fab = getByText('+');
-    fireEvent.press(fab);
-    expect(mockNavigate).toHaveBeenCalledWith('EmotionRecord');
-  });
-
-  it('renders BrainQuest watermark', () => {
-    const { getByText } = renderWithProviders(<EmotionCalendarScreen />);
+  // 11. Renders BrainQuest watermark
+  it('renders BrainQuest watermark in calendar area', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
     expect(getByText('BrainQuest')).toBeTruthy();
+  });
+
+  // 12. Multiple month navigations work correctly
+  it('navigates forward and backward multiple months correctly', () => {
+    const { getAllByText, getByText } = render(<EmotionCalendarScreen />);
+    const now = new Date();
+    const rightArrow = getAllByText('>')[0];
+    const leftArrow = getAllByText('<')[0];
+
+    // Go forward 2 months
+    fireEvent.press(rightArrow);
+    fireEvent.press(rightArrow);
+
+    // Go back 2 months to original
+    fireEvent.press(leftArrow);
+    fireEvent.press(leftArrow);
+
+    const expected = `${now.getFullYear()}년 ${now.getMonth() + 1}월`;
+    expect(getByText(expected)).toBeTruthy();
+  });
+
+  // 13. Weekly summary shows distribution data
+  it('shows weather distribution count in weekly summary', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
+    // SUNNY count = 3
+    expect(getByText('3일')).toBeTruthy();
+  });
+
+  // 14. Weekly summary share button renders
+  it('shows share button in weekly summary card', () => {
+    const { getByText } = render(<EmotionCalendarScreen />);
+    expect(getByText('공유하기')).toBeTruthy();
   });
 });

@@ -4,32 +4,34 @@ import { render, fireEvent } from '@testing-library/react-native';
 import Header from '../Header';
 
 describe('Header', () => {
-  it('renders title', () => {
-    const { getByText } = render(<Header title="테스트 제목" />);
-    expect(getByText('테스트 제목')).toBeTruthy();
+  it('renders title text', () => {
+    const { getByText } = render(<Header title="Test Title" />);
+    expect(getByText('Test Title')).toBeTruthy();
   });
 
-  it('renders without back button when onBack is not provided', () => {
-    const { queryByText } = render(<Header title="제목" />);
-    expect(queryByText('<')).toBeNull();
-  });
-
-  it('renders back button when onBack is provided', () => {
-    const { getByText } = render(<Header title="제목" onBack={jest.fn()} />);
+  it('shows back button when onBack is provided', () => {
+    const onBack = jest.fn();
+    const { getByText } = render(<Header title="Title" onBack={onBack} />);
     expect(getByText('<')).toBeTruthy();
   });
 
-  it('calls onBack when back button is pressed', () => {
+  it('hides back button when onBack is not provided', () => {
+    const { queryByText } = render(<Header title="Title" />);
+    expect(queryByText('<')).toBeNull();
+  });
+
+  it('calls onBack when back button is tapped', () => {
     const onBack = jest.fn();
-    const { getByText } = render(<Header title="제목" onBack={onBack} />);
+    const { getByText } = render(<Header title="Title" onBack={onBack} />);
     fireEvent.press(getByText('<'));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('renders right element when provided', () => {
+  it('renders rightElement when provided', () => {
+    const rightElement = <Text>Right</Text>;
     const { getByText } = render(
-      <Header title="제목" rightElement={<Text>오른쪽</Text>} />,
+      <Header title="Title" rightElement={rightElement} />
     );
-    expect(getByText('오른쪽')).toBeTruthy();
+    expect(getByText('Right')).toBeTruthy();
   });
 });

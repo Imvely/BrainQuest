@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -74,8 +74,11 @@ export default function QuestCreateScreen() {
 
   const previewGrade = getGradeForMin(estimatedMin);
 
-  // Loading animation
+  // Loading animation — stop when leaving step 2
   const rotation = useSharedValue(0);
+  useEffect(() => {
+    if (step !== 2) rotation.value = 0;
+  }, [step, rotation]);
   const rotationStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotation.value}deg` }],
   }));

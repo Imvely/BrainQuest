@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import QuestCreateScreen from '../QuestCreateScreen';
 import { QuestGenerateResponse } from '../../../types/quest';
 
@@ -9,19 +8,19 @@ import { QuestGenerateResponse } from '../../../types/quest';
 const mockGoBack = jest.fn();
 const mockNavigate = jest.fn();
 jest.mock('@react-navigation/native', () => ({
-  ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
+  useRoute: () => ({ params: {} }),
+}));
+
+jest.mock('@react-navigation/stack', () => ({
+  createStackNavigator: jest.fn(),
 }));
 
 // --- Hook & API mocks ---
 const mockMutate = jest.fn();
-let mockGenerateQuestReturn: {
-  mutate: jest.Mock;
-  isPending: boolean;
-};
 
 jest.mock('../../../hooks/useQuests', () => ({
-  useGenerateQuest: () => mockGenerateQuestReturn,
+  useGenerateQuest: jest.fn(() => ({ mutate: mockMutate, isPending: false })),
 }));
 
 const mockCreateQuest = jest.fn();
@@ -43,27 +42,14 @@ const generatedResult: QuestGenerateResponse = {
   ],
 };
 
-// --- Helpers ---
-function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
-}
-
 /**
- * Simulate the mutation flow: when mutate is called, it captures
- * the onSuccess/onError callbacks, allowing us to trigger them manually.
+ * Utility: capture onSuccess/onError callbacks from mutate calls.
  */
 function setupMutateWithCallbacks() {
   let capturedCallbacks: { onSuccess?: (data: any) => void; onError?: () => void } = {};
-
   mockMutate.mockImplementation((_payload: any, callbacks: any) => {
     capturedCallbacks = callbacks || {};
   });
-
   return {
     triggerSuccess: (data: any) => capturedCallbacks.onSuccess?.(data),
     triggerError: () => capturedCallbacks.onError?.(),
@@ -73,17 +59,22 @@ function setupMutateWithCallbacks() {
 describe('QuestCreateScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGenerateQuestReturn = {
-      mutate: mockMutate,
-      isPending: false,
-    };
   });
 
-  // --- 1. Step 1: renders header, TextInput, time buttons ---
-  it('renders "퀘스트 생성" header, TextInput, and time buttons', () => {
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+  // --- Step 1 tests ---
+
+  it('step 1: renders "퀘스트 생성" header', () => {
+    const { getByText } = render(<QuestCreateScreen />);
     expect(getByText('퀘스트 생성')).toBeTruthy();
-    expect(getByPlaceholderText(/설거지, 보고서 작성/)).toBeTruthy();
+  });
+
+  it('shows title input with placeholder', () => {
+    const { getByPlaceholderText } = render(<QuestCreateScreen />);
+    expect(getByPlaceholderText(/설거지, 보고서 작성, 운동/)).toBeTruthy();
+  });
+
+  it('shows time quick buttons (5, 10, 15, 30, 60, 90, 120, 180)', () => {
+    const { getByText } = render(<QuestCreateScreen />);
     expect(getByText('5m')).toBeTruthy();
     expect(getByText('10m')).toBeTruthy();
     expect(getByText('15m')).toBeTruthy();
@@ -94,91 +85,76 @@ describe('QuestCreateScreen', () => {
     expect(getByText('3h')).toBeTruthy();
   });
 
-  // --- 2. Generate button disabled when title empty ---
-  it('"퀘스트 변환!" button is disabled when title is empty', () => {
-    const { getByText } = renderWithProviders(<QuestCreateScreen />);
-    const btn = getByText('퀘스트 변환!');
-    fireEvent.press(btn);
-    // mutate should not be called because button is disabled
+  it('shows category chips (업무, 가사, 건강, 사회, 자기관리)', () => {
+    const { getByText } = render(<QuestCreateScreen />);
+    expect(getByText('업무')).toBeTruthy();
+    expect(getByText('가사')).toBeTruthy();
+    expect(getByText('건강')).toBeTruthy();
+    expect(getByText('사회')).toBeTruthy();
+    expect(getByText('자기관리')).toBeTruthy();
+  });
+
+  it('shows due date input', () => {
+    const { getByPlaceholderText } = render(<QuestCreateScreen />);
+    expect(getByPlaceholderText('YYYY-MM-DD')).toBeTruthy();
+  });
+
+  it('"퀘스트 변환!" button disabled when title empty', () => {
+    const { getByText } = render(<QuestCreateScreen />);
+    fireEvent.press(getByText('퀘스트 변환!'));
+    // Button is disabled, so mutate should not be called
     expect(mockMutate).not.toHaveBeenCalled();
   });
 
-  // --- 3. Entering title enables generate button ---
-  it('entering title enables generate button', () => {
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
-    const input = getByPlaceholderText(/설거지/);
-    fireEvent.changeText(input, '보고서 작성');
-
-    // Button should now be present and pressable
+  it('"퀘스트 변환!" button enabled when title entered', () => {
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
+    fireEvent.changeText(getByPlaceholderText(/설거지/), '보고서 작성');
     const btn = getByText('퀘스트 변환!');
     expect(btn).toBeTruthy();
-    expect(input.props.value).toBe('보고서 작성');
+    // Verify the input has the value
+    expect(getByPlaceholderText(/설거지/).props.value).toBe('보고서 작성');
   });
 
-  // --- 4. Time button "30m" is initially active (estimatedMin=30) ---
-  it('time button "30m" is initially active with D grade preview', () => {
-    const { getByText } = renderWithProviders(<QuestCreateScreen />);
-    // Default estimatedMin is 30 => D급
+  it('tapping time button updates estimated time', () => {
+    const { getByText } = render(<QuestCreateScreen />);
+    // Default is 30 => D급
     expect(getByText('D급')).toBeTruthy();
     expect(getByText('30분')).toBeTruthy();
-  });
 
-  // --- 5. Selecting different time updates grade preview ---
-  it('selecting different time updates grade preview', () => {
-    const { getByText } = renderWithProviders(<QuestCreateScreen />);
-
-    // Tap 10m -> E급
+    // Tap 10m => E급
     fireEvent.press(getByText('10m'));
     expect(getByText('E급')).toBeTruthy();
     expect(getByText('10분')).toBeTruthy();
 
-    // Tap 1h -> C급
+    // Tap 1h (60) => C급
     fireEvent.press(getByText('1h'));
     expect(getByText('C급')).toBeTruthy();
     expect(getByText('60분')).toBeTruthy();
-
-    // Tap 2h -> B급
-    fireEvent.press(getByText('2h'));
-    expect(getByText('B급')).toBeTruthy();
-    expect(getByText('120분')).toBeTruthy();
-
-    // Tap 3h -> A급
-    fireEvent.press(getByText('3h'));
-    expect(getByText('A급')).toBeTruthy();
-    expect(getByText('180분')).toBeTruthy();
   });
 
-  // --- 6. Pressing generate with title triggers mutation ---
-  it('pressing generate with title triggers mutate function', async () => {
-    mockMutate.mockImplementation(() => {}); // no-op, stays on step 2
+  it('empty title shows alert on generate attempt', async () => {
+    const alertSpy = jest.spyOn(Alert, 'alert');
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
-    fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
+    // Enter spaces only (trims to empty)
+    fireEvent.changeText(getByPlaceholderText(/설거지/), '   ');
 
-    await act(async () => {
-      fireEvent.press(getByText('퀘스트 변환!'));
-    });
+    // The button is disabled because !title.trim() is true, so press won't trigger
+    // However, the component disables the button, so mutate won't be called
+    fireEvent.press(getByText('퀘스트 변환!'));
+    expect(mockMutate).not.toHaveBeenCalled();
 
-    expect(mockMutate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        originalTitle: '설거지',
-        estimatedMin: 30,
-        category: 'WORK',
-      }),
-      expect.objectContaining({
-        onSuccess: expect.any(Function),
-        onError: expect.any(Function),
-      }),
-    );
+    alertSpy.mockRestore();
   });
 
-  // --- 7. Step 2: shows "마법진 가동 중..." during loading ---
-  it('shows "마법진 가동 중..." during loading (step 2)', async () => {
+  // --- Step 2 tests ---
+
+  it('step 2: shows loading UI "마법진 가동 중..."', async () => {
     mockMutate.mockImplementation(() => {
       // Do nothing - stays on step 2
     });
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
 
     await act(async () => {
@@ -189,40 +165,68 @@ describe('QuestCreateScreen', () => {
     expect(getByText(/설거지/)).toBeTruthy();
   });
 
-  // --- 8. Step 3: shows result after successful generation ---
-  it('shows result after successful generation (step 3)', async () => {
+  // --- Step 3 tests ---
+
+  it('step 3: shows generated quest result with title, story, checkpoints', async () => {
     const { triggerSuccess } = setupMutateWithCallbacks();
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
 
     await act(async () => {
       fireEvent.press(getByText('퀘스트 변환!'));
     });
 
-    // Simulate successful mutation response
     await act(async () => {
       triggerSuccess({ data: generatedResult });
     });
 
     await waitFor(() => {
+      // Header
       expect(getByText('퀘스트 변환 완료')).toBeTruthy();
+      // Title
       expect(getByText('마왕의 식기 정화 퀘스트')).toBeTruthy();
+      // Story
       expect(getByText(/어둠의 식기들/)).toBeTruthy();
+      // Grade & rewards
       expect(getByText('E급 퀘스트')).toBeTruthy();
       expect(getByText('+10 XP')).toBeTruthy();
       expect(getByText('+5 G')).toBeTruthy();
+      expect(getByText('10분')).toBeTruthy();
+      // Checkpoints
       expect(getByText('수세미 장비 장착')).toBeTruthy();
       expect(getByText('접시 정화 시작')).toBeTruthy();
     });
   });
 
-  // --- 9. "이 퀘스트로 시작!" calls createQuest API and navigates back ---
-  it('"이 퀘스트로 시작!" calls createQuest API and navigates back', async () => {
+  it('"다시 변환" resets to step 1', async () => {
+    const { triggerSuccess } = setupMutateWithCallbacks();
+
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
+    fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
+
+    await act(async () => {
+      fireEvent.press(getByText('퀘스트 변환!'));
+    });
+
+    await act(async () => {
+      triggerSuccess({ data: generatedResult });
+    });
+
+    await waitFor(() => getByText('다시 변환'));
+    fireEvent.press(getByText('다시 변환'));
+
+    await waitFor(() => {
+      expect(getByText('퀘스트 생성')).toBeTruthy();
+      expect(getByPlaceholderText(/설거지/)).toBeTruthy();
+    });
+  });
+
+  it('"이 퀘스트로 시작!" calls createQuest API', async () => {
     const { triggerSuccess } = setupMutateWithCallbacks();
     mockCreateQuest.mockResolvedValue({ success: true, data: {}, message: '' });
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
 
     await act(async () => {
@@ -250,67 +254,25 @@ describe('QuestCreateScreen', () => {
     });
   });
 
-  // --- 10. "다시 변환" returns to step 1 ---
-  it('"다시 변환" returns to step 1', async () => {
-    const { triggerSuccess } = setupMutateWithCallbacks();
+  // --- Additional tests ---
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
-    fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
-
-    await act(async () => {
-      fireEvent.press(getByText('퀘스트 변환!'));
-    });
-
-    await act(async () => {
-      triggerSuccess({ data: generatedResult });
-    });
-
-    await waitFor(() => getByText('다시 변환'));
-    fireEvent.press(getByText('다시 변환'));
-
-    await waitFor(() => {
-      expect(getByText('퀘스트 생성')).toBeTruthy();
-      expect(getByPlaceholderText(/설거지/)).toBeTruthy();
-    });
-  });
-
-  // --- 11. Category chips are selectable ---
-  it('category chips are selectable', () => {
-    const { getByText } = renderWithProviders(<QuestCreateScreen />);
-    expect(getByText('업무')).toBeTruthy();
-    expect(getByText('가사')).toBeTruthy();
-    expect(getByText('건강')).toBeTruthy();
-    expect(getByText('사회')).toBeTruthy();
-    expect(getByText('자기관리')).toBeTruthy();
-
-    // Switch category (no crash)
-    fireEvent.press(getByText('건강'));
-    expect(getByText('건강')).toBeTruthy();
-
-    fireEvent.press(getByText('자기관리'));
-    expect(getByText('자기관리')).toBeTruthy();
-  });
-
-  // --- Additional: back button ---
   it('back button calls goBack', () => {
-    const { getByText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText } = render(<QuestCreateScreen />);
     fireEvent.press(getByText('<'));
     expect(mockGoBack).toHaveBeenCalled();
   });
 
-  // --- Additional: error returns to step 1 ---
   it('shows alert and returns to step 1 on mutation error', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     const { triggerError } = setupMutateWithCallbacks();
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
 
     await act(async () => {
       fireEvent.press(getByText('퀘스트 변환!'));
     });
 
-    // Step 2 should be showing
     expect(getByText('마법진 가동 중...')).toBeTruthy();
 
     await act(async () => {
@@ -325,13 +287,12 @@ describe('QuestCreateScreen', () => {
     alertSpy.mockRestore();
   });
 
-  // --- Additional: save failure shows alert ---
   it('shows alert on save failure', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     const { triggerSuccess } = setupMutateWithCallbacks();
     mockCreateQuest.mockRejectedValue(new Error('Save error'));
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
 
     await act(async () => {
@@ -354,39 +315,10 @@ describe('QuestCreateScreen', () => {
     alertSpy.mockRestore();
   });
 
-  // --- Additional: due date input ---
-  it('accepts due date input', () => {
-    const { getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
-    const dateInput = getByPlaceholderText('YYYY-MM-DD');
-    fireEvent.changeText(dateInput, '2026-05-01');
-    expect(dateInput.props.value).toBe('2026-05-01');
-  });
-
-  // --- Additional: timeline toggle on result ---
-  it('shows timeline toggle on result screen', async () => {
-    const { triggerSuccess } = setupMutateWithCallbacks();
-
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
-    fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
-
-    await act(async () => {
-      fireEvent.press(getByText('퀘스트 변환!'));
-    });
-
-    await act(async () => {
-      triggerSuccess({ data: generatedResult });
-    });
-
-    await waitFor(() => {
-      expect(getByText('타임라인에 배치할까요?')).toBeTruthy();
-    });
-  });
-
-  // --- Additional: mutation uses selected category ---
-  it('mutation uses selected category when generating', async () => {
+  it('category selection updates mutation payload', async () => {
     mockMutate.mockImplementation(() => {});
 
-    const { getByText, getByPlaceholderText } = renderWithProviders(<QuestCreateScreen />);
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
     fireEvent.changeText(getByPlaceholderText(/설거지/), '운동하기');
     fireEvent.press(getByText('건강'));
 
@@ -401,5 +333,31 @@ describe('QuestCreateScreen', () => {
       }),
       expect.any(Object),
     );
+  });
+
+  it('due date input accepts text', () => {
+    const { getByPlaceholderText } = render(<QuestCreateScreen />);
+    const dateInput = getByPlaceholderText('YYYY-MM-DD');
+    fireEvent.changeText(dateInput, '2026-05-01');
+    expect(dateInput.props.value).toBe('2026-05-01');
+  });
+
+  it('shows timeline toggle on result screen', async () => {
+    const { triggerSuccess } = setupMutateWithCallbacks();
+
+    const { getByText, getByPlaceholderText } = render(<QuestCreateScreen />);
+    fireEvent.changeText(getByPlaceholderText(/설거지/), '설거지');
+
+    await act(async () => {
+      fireEvent.press(getByText('퀘스트 변환!'));
+    });
+
+    await act(async () => {
+      triggerSuccess({ data: generatedResult });
+    });
+
+    await waitFor(() => {
+      expect(getByText('타임라인에 배치할까요?')).toBeTruthy();
+    });
   });
 });

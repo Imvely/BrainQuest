@@ -2,6 +2,8 @@ import React from 'react';
 import { render, fireEvent, act } from '@testing-library/react-native';
 import StyleQuizScreen from '../StyleQuizScreen';
 
+// --- Mocks ---
+
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
@@ -9,139 +11,206 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate, goBack: mockGoBack }),
 }));
 
+// --- Tests ---
+
 describe('StyleQuizScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  // --- 1. Rendering ---
+  // ===========================================
+  // 1. Initial Rendering
+  // ===========================================
   describe('rendering', () => {
-    it('renders without crashing', () => {
-      const { toJSON } = render(<StyleQuizScreen />);
-      expect(toJSON()).toBeTruthy();
+    it('renders first question "아침에 알람이 울렸다!"', () => {
+      const { getByText } = render(<StyleQuizScreen />);
+      expect(getByText(/아침에 알람이 울렸다/)).toBeTruthy();
     });
 
-    it('displays header title', () => {
+    it('renders 3 options for Q1', () => {
       const { getByText } = render(<StyleQuizScreen />);
+      expect(getByText('5분만... 5분만...')).toBeTruthy();
+      expect(getByText('바로 일어나서 준비 시작!')).toBeTruthy();
+      expect(getByText('30분 뒤에 깜짝 기상')).toBeTruthy();
+    });
+
+    it('renders back button and progress bar', () => {
+      const { getByText } = render(<StyleQuizScreen />);
+      expect(getByText('<')).toBeTruthy();
       expect(getByText('스타일 퀴즈')).toBeTruthy();
     });
 
-    it('shows progress counter starting at 1/5', () => {
+    it('shows counter "1 / 5"', () => {
       const { getByText } = render(<StyleQuizScreen />);
       expect(getByText('1 / 5')).toBeTruthy();
     });
-
-    it('displays first scenario', () => {
-      const { getByText } = render(<StyleQuizScreen />);
-      expect(getByText(/던전 입구에 도착했다/)).toBeTruthy();
-    });
-
-    it('shows 3 answer options', () => {
-      const { getByText } = render(<StyleQuizScreen />);
-      expect(getByText('정면 돌파! 곧바로 뛰어든다')).toBeTruthy();
-      expect(getByText('지도를 꼼꼼히 분석한 후 들어간다')).toBeTruthy();
-      expect(getByText('상황 봐가며 유연하게 움직인다')).toBeTruthy();
-    });
   });
 
-  // --- 2. Quiz progression ---
+  // ===========================================
+  // 2. Quiz Progression
+  // ===========================================
   describe('quiz progression', () => {
-    it('advances to Q2 after answering Q1', () => {
+    it('tapping option advances to next question', () => {
       const { getByText } = render(<StyleQuizScreen />);
-      fireEvent.press(getByText('정면 돌파! 곧바로 뛰어든다'));
+      fireEvent.press(getByText('5분만... 5분만...'));
       expect(getByText('2 / 5')).toBeTruthy();
-      expect(getByText(/보스 몬스터가 나타났다/)).toBeTruthy();
     });
 
-    it('advances through all 5 questions', () => {
+    it('Q2 has 4 options', () => {
       const { getByText } = render(<StyleQuizScreen />);
-      // Q1 -> WARRIOR
-      fireEvent.press(getByText('정면 돌파! 곧바로 뛰어든다'));
-      // Q2 -> WARRIOR
-      fireEvent.press(getByText('짧고 강한 연타로 순식간에 끝낸다'));
-      // Q3 -> WARRIOR
-      fireEvent.press(getByText('바로 다음 퀘스트를 시작한다'));
-      // Q4 -> WARRIOR
-      fireEvent.press(getByText('즉시 달려가서 직접 해결한다'));
-      // Q5 -> WARRIOR (should show result)
-      fireEvent.press(getByText('짧은 운동이나 스트레칭으로 에너지를 태운다'));
+      // Answer Q1 to advance to Q2
+      fireEvent.press(getByText('5분만... 5분만...'));
 
-      // Result should appear
-      expect(getByText('당신의 모험 스타일은')).toBeTruthy();
-      expect(getByText('워리어')).toBeTruthy();
+      expect(getByText(/떠오른 아이디어/)).toBeTruthy();
+      expect(getByText('바로 손들고 말한다')).toBeTruthy();
+      expect(getByText('조용히 메모해둔다')).toBeTruthy();
+      expect(getByText('...뭐였더라?')).toBeTruthy();
+      expect(getByText('아이디어에서 딴생각으로...')).toBeTruthy();
+    });
+
+    it('advances through all questions to Q5', () => {
+      const { getByText } = render(<StyleQuizScreen />);
+      // Q1 -> Q2
+      fireEvent.press(getByText('5분만... 5분만...'));
+      expect(getByText('2 / 5')).toBeTruthy();
+
+      // Q2 -> Q3
+      fireEvent.press(getByText('바로 손들고 말한다'));
+      expect(getByText('3 / 5')).toBeTruthy();
+
+      // Q3 -> Q4
+      fireEvent.press(getByText(/새벽이나 오전/));
+      expect(getByText('4 / 5')).toBeTruthy();
+
+      // Q4 -> Q5
+      fireEvent.press(getByText(/마감 순서대로 정리/));
+      expect(getByText('5 / 5')).toBeTruthy();
     });
   });
 
-  // --- 3. Class determination ---
+  // ===========================================
+  // 3. Result Screen - Class Determination
+  // ===========================================
   describe('class determination', () => {
-    it('returns WARRIOR when most answers are WARRIOR', () => {
-      const { getByText } = render(<StyleQuizScreen />);
-      // All WARRIOR answers
-      fireEvent.press(getByText('정면 돌파! 곧바로 뛰어든다'));
-      fireEvent.press(getByText('짧고 강한 연타로 순식간에 끝낸다'));
-      fireEvent.press(getByText('바로 다음 퀘스트를 시작한다'));
-      fireEvent.press(getByText('즉시 달려가서 직접 해결한다'));
-      fireEvent.press(getByText('짧은 운동이나 스트레칭으로 에너지를 태운다'));
-
-      expect(getByText('워리어')).toBeTruthy();
-      expect(getByText(/추천 세션: 15~25분/)).toBeTruthy();
-    });
-
-    it('returns MAGE when most answers are MAGE', () => {
-      const { getByText } = render(<StyleQuizScreen />);
-      // All MAGE answers
-      fireEvent.press(getByText('지도를 꼼꼼히 분석한 후 들어간다'));
-      fireEvent.press(getByText('패턴을 파악하고 전략적으로 공략한다'));
-      fireEvent.press(getByText('장비 강화와 스킬 연구에 투자한다'));
-      fireEvent.press(getByText('문제를 분석해서 최적의 해법을 알려준다'));
-      fireEvent.press(getByText('조용한 곳에서 머리를 정리한다'));
-
-      expect(getByText('메이지')).toBeTruthy();
-      expect(getByText(/추천 세션: 25~40분/)).toBeTruthy();
-    });
-
-    it('returns RANGER when most answers are RANGER', () => {
-      const { getByText } = render(<StyleQuizScreen />);
-      // All RANGER answers
-      fireEvent.press(getByText('상황 봐가며 유연하게 움직인다'));
-      fireEvent.press(getByText('거리를 유지하며 빈틈을 노린다'));
-      fireEvent.press(getByText('마을을 탐험하며 새로운 것을 찾는다'));
-      fireEvent.press(getByText('상황에 맞게 지원 방식을 바꿔가며 돕는다'));
-      fireEvent.press(getByText('장소나 활동을 바꿔본다'));
-
-      expect(getByText('레인저')).toBeTruthy();
-      expect(getByText(/추천 세션: 유동적/)).toBeTruthy();
-    });
-  });
-
-  // --- 4. Result screen interactions ---
-  describe('result screen', () => {
-    function completeAsWarrior(rendered: ReturnType<typeof render>) {
+    // Helper to answer all 5 questions with a specific class
+    function answerAllWarrior(rendered: ReturnType<typeof render>) {
       const { getByText } = rendered;
-      fireEvent.press(getByText('정면 돌파! 곧바로 뛰어든다'));
-      fireEvent.press(getByText('짧고 강한 연타로 순식간에 끝낸다'));
-      fireEvent.press(getByText('바로 다음 퀘스트를 시작한다'));
-      fireEvent.press(getByText('즉시 달려가서 직접 해결한다'));
-      fireEvent.press(getByText('짧은 운동이나 스트레칭으로 에너지를 태운다'));
+      // Q1: WARRIOR
+      fireEvent.press(getByText('5분만... 5분만...'));
+      // Q2: WARRIOR
+      fireEvent.press(getByText('바로 손들고 말한다'));
+      // Q3: WARRIOR
+      fireEvent.press(getByText(/새벽이나 오전/));
+      // Q4: WARRIOR
+      fireEvent.press(getByText(/마감 순서대로 정리/));
+      // Q5: WARRIOR
+      fireEvent.press(getByText(/정확히 5분 후 복귀/));
     }
 
-    it('shows class description', () => {
+    function answerAllMage(rendered: ReturnType<typeof render>) {
+      const { getByText } = rendered;
+      // Q1: MAGE
+      fireEvent.press(getByText('30분 뒤에 깜짝 기상'));
+      // Q2: MAGE
+      fireEvent.press(getByText('...뭐였더라?'));
+      // Q3: MAGE
+      fireEvent.press(getByText('밤'));
+      // Q4: MAGE
+      fireEvent.press(getByText('...일단 멍'));
+      // Q5: MAGE
+      fireEvent.press(getByText('1시간이 지나있다'));
+    }
+
+    function answerAllRanger(rendered: ReturnType<typeof render>) {
+      const { getByText } = rendered;
+      // Q1: RANGER
+      fireEvent.press(getByText('바로 일어나서 준비 시작!'));
+      // Q2: RANGER
+      fireEvent.press(getByText('조용히 메모해둔다'));
+      // Q3: RANGER
+      fireEvent.press(getByText('오후'));
+      // Q4: RANGER
+      fireEvent.press(getByText(/쉬운 것부터 하나씩/));
+      // Q5: RANGER
+      fireEvent.press(getByText(/15분 정도 쉬었다/));
+    }
+
+    it('after all 5 answers shows result screen', () => {
       const rendered = render(<StyleQuizScreen />);
-      completeAsWarrior(rendered);
-      expect(rendered.getByText(/짧고 강렬한 집중이 강점/)).toBeTruthy();
+      answerAllWarrior(rendered);
+      expect(rendered.getByText('당신의 모험 스타일은')).toBeTruthy();
     });
 
-    it('navigates to CharacterCreate with classType on button press', () => {
+    it('all WARRIOR answers shows 워리어 result', () => {
       const rendered = render(<StyleQuizScreen />);
-      completeAsWarrior(rendered);
+      answerAllWarrior(rendered);
+      expect(rendered.getByText('워리어')).toBeTruthy();
+    });
+
+    it('all MAGE answers shows 메이지 result', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllMage(rendered);
+      expect(rendered.getByText('메이지')).toBeTruthy();
+    });
+
+    it('all RANGER answers shows 레인저 result', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllRanger(rendered);
+      expect(rendered.getByText('레인저')).toBeTruthy();
+    });
+
+    it('result shows class emoji, title, description, and session pattern', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllWarrior(rendered);
+      expect(rendered.getByText('당신의 모험 스타일은')).toBeTruthy();
+      expect(rendered.getByText('워리어')).toBeTruthy();
+      expect(rendered.getByText(/폭발적 집중력의 소유자/)).toBeTruthy();
+      expect(rendered.getByText(/추천 세션: 15~25분/)).toBeTruthy();
+    });
+
+    it('MAGE result shows correct description and session pattern', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllMage(rendered);
+      expect(rendered.getByText('메이지')).toBeTruthy();
+      expect(rendered.getByText(/깊은 몰입의 마법사/)).toBeTruthy();
+      expect(rendered.getByText(/추천 세션: 25~40분/)).toBeTruthy();
+    });
+
+    it('RANGER result shows correct description and session pattern', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllRanger(rendered);
+      expect(rendered.getByText('레인저')).toBeTruthy();
+      expect(rendered.getByText(/변화무쌍한 적응의 달인/)).toBeTruthy();
+      expect(rendered.getByText(/추천 세션: 유동적/)).toBeTruthy();
+    });
+  });
+
+  // ===========================================
+  // 4. Result Screen - Navigation
+  // ===========================================
+  describe('result screen navigation', () => {
+    function answerAllWarrior(rendered: ReturnType<typeof render>) {
+      const { getByText } = rendered;
+      fireEvent.press(getByText('5분만... 5분만...'));
+      fireEvent.press(getByText('바로 손들고 말한다'));
+      fireEvent.press(getByText(/새벽이나 오전/));
+      fireEvent.press(getByText(/마감 순서대로 정리/));
+      fireEvent.press(getByText(/정확히 5분 후 복귀/));
+    }
+
+    it('"캐릭터 만들기" button navigates to CharacterCreate with classType', () => {
+      const rendered = render(<StyleQuizScreen />);
+      answerAllWarrior(rendered);
       fireEvent.press(rendered.getByText('캐릭터 만들기'));
       expect(mockNavigate).toHaveBeenCalledWith('CharacterCreate', { classType: 'WARRIOR' });
     });
   });
 
-  // --- 5. Back navigation ---
-  describe('navigation', () => {
-    it('calls goBack when back button pressed', () => {
+  // ===========================================
+  // 5. Back Navigation
+  // ===========================================
+  describe('back navigation', () => {
+    it('back button on quiz calls navigation.goBack()', () => {
       const { getByText } = render(<StyleQuizScreen />);
       fireEvent.press(getByText('<'));
       expect(mockGoBack).toHaveBeenCalled();

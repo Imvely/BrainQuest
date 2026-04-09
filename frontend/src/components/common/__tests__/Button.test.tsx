@@ -1,60 +1,101 @@
 import React from 'react';
+import { ActivityIndicator } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import Button from '../Button';
+import { Colors } from '../../../constants/colors';
 
 describe('Button', () => {
-  it('renders title text', () => {
-    const { getByText } = render(<Button title="확인" onPress={() => {}} />);
-    expect(getByText('확인')).toBeTruthy();
+  const defaultProps = {
+    title: 'Test Button',
+    onPress: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('calls onPress when pressed', () => {
+  it('renders title text', () => {
+    const { getByText } = render(<Button {...defaultProps} />);
+    expect(getByText('Test Button')).toBeTruthy();
+  });
+
+  it('calls onPress when tapped', () => {
     const onPress = jest.fn();
-    const { getByText } = render(<Button title="확인" onPress={onPress} />);
-    fireEvent.press(getByText('확인'));
+    const { getByText } = render(<Button {...defaultProps} onPress={onPress} />);
+    fireEvent.press(getByText('Test Button'));
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
-  it('does not call onPress when disabled', () => {
-    const onPress = jest.fn();
-    const { getByText } = render(<Button title="확인" onPress={onPress} disabled />);
-    fireEvent.press(getByText('확인'));
-    expect(onPress).not.toHaveBeenCalled();
-  });
-
-  it('shows ActivityIndicator when loading', () => {
+  it('shows ActivityIndicator when loading=true', () => {
     const { queryByText, UNSAFE_getByType } = render(
-      <Button title="확인" onPress={() => {}} loading />,
+      <Button {...defaultProps} loading={true} />
     );
-    expect(queryByText('확인')).toBeNull();
+    expect(queryByText('Test Button')).toBeNull();
+    expect(UNSAFE_getByType(ActivityIndicator)).toBeTruthy();
   });
 
-  it('does not call onPress when loading', () => {
+  it('disabled button does not call onPress', () => {
     const onPress = jest.fn();
-    const { getByTestId } = render(
-      <Button title="확인" onPress={onPress} loading />,
+    const { getByText } = render(
+      <Button {...defaultProps} onPress={onPress} disabled={true} />
     );
-    // Loading button should not be pressable
+    fireEvent.press(getByText('Test Button'));
     expect(onPress).not.toHaveBeenCalled();
   });
 
-  it('renders different variants without crashing', () => {
-    const variants = ['primary', 'secondary', 'outline', 'ghost'] as const;
-    variants.forEach((variant) => {
-      const { unmount } = render(
-        <Button title={variant} onPress={() => {}} variant={variant} />,
-      );
-      unmount();
-    });
+  it('primary variant applies correct background color', () => {
+    const { toJSON } = render(<Button {...defaultProps} variant="primary" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.backgroundColor).toBe(Colors.PRIMARY);
   });
 
-  it('renders different sizes without crashing', () => {
-    const sizes = ['sm', 'md', 'lg'] as const;
-    sizes.forEach((size) => {
-      const { unmount } = render(
-        <Button title={size} onPress={() => {}} size={size} />,
-      );
-      unmount();
-    });
+  it('secondary variant applies correct background color', () => {
+    const { toJSON } = render(<Button {...defaultProps} variant="secondary" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.backgroundColor).toBe(Colors.SECONDARY);
+  });
+
+  it('outline variant applies transparent background and border', () => {
+    const { toJSON } = render(<Button {...defaultProps} variant="outline" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.backgroundColor).toBe('transparent');
+    expect(flatStyle.borderWidth).toBe(1);
+    expect(flatStyle.borderColor).toBe(Colors.PRIMARY);
+  });
+
+  it('size sm applies height 44', () => {
+    const { toJSON } = render(<Button {...defaultProps} size="sm" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.height).toBe(44);
+  });
+
+  it('size md applies height 48', () => {
+    const { toJSON } = render(<Button {...defaultProps} size="md" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.height).toBe(48);
+  });
+
+  it('size lg applies height 56', () => {
+    const { toJSON } = render(<Button {...defaultProps} size="lg" />);
+    const tree = toJSON();
+    const flatStyle = Array.isArray(tree.props.style)
+      ? Object.assign({}, ...tree.props.style.filter(Boolean))
+      : tree.props.style;
+    expect(flatStyle.height).toBe(56);
   });
 });

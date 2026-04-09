@@ -8,8 +8,8 @@ import {
   Modal,
   Alert,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform,
+  TextInput,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -75,7 +75,7 @@ const SCALE_OPTIONS = [
   { value: 4, label: '매우\n그렇다' },
 ] as const;
 
-type Phase = 'selection' | 'quiz' | 'result';
+type Phase = 'selection' | 'diagnosis' | 'quiz' | 'result';
 
 function getRiskLevel(score: number): 'LOW' | 'MEDIUM' | 'HIGH' {
   if (score <= 9) return 'LOW';
@@ -98,6 +98,7 @@ export default function ScreeningScreen() {
   const [result, setResult] = useState<ScreeningResult | null>(null);
   const [tooltipVisible, setTooltipVisible] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [diagnosisDate, setDiagnosisDate] = useState('');
 
   const shareCardRef = useRef<ViewShot>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -196,12 +197,12 @@ export default function ScreeningScreen() {
 
             <TouchableOpacity
               style={styles.selectionCard}
-              onPress={() => navigation.navigate('StyleQuiz')}
+              onPress={() => setPhase('diagnosis')}
               activeOpacity={0.7}
             >
               <Text style={styles.cardEmoji}>{'📋'}</Text>
               <Text style={styles.cardTitle}>이미 진단받았어요</Text>
-              <Text style={styles.cardDesc}>바로 캐릭터 스타일을{'\n'}찾아볼게요</Text>
+              <Text style={styles.cardDesc}>진단 정보 입력 후{'\n'}스타일 퀴즈로</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -215,6 +216,45 @@ export default function ScreeningScreen() {
             </TouchableOpacity>
           </View>
         </View>
+      </SafeAreaView>
+    );
+  }
+
+  // --- Diagnosis Phase ---
+  if (phase === 'diagnosis') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.quizHeader}>
+          <TouchableOpacity onPress={() => setPhase('selection')} style={styles.backBtn}>
+            <Text style={styles.backText}>{'<'}</Text>
+          </TouchableOpacity>
+          <View style={styles.headerPlaceholder} />
+          <View style={styles.headerPlaceholder} />
+        </View>
+
+        <ScrollView contentContainerStyle={styles.diagnosisContent}>
+          <Text style={styles.selectionTitle}>진단 정보</Text>
+          <Text style={styles.selectionSubtitle}>이미 ADHD 진단을 받으셨군요</Text>
+
+          <View style={styles.diagnosisForm}>
+            <Text style={styles.diagnosisLabel}>진단 시기 (선택)</Text>
+            <TextInput
+              style={styles.diagnosisInput}
+              value={diagnosisDate}
+              onChangeText={setDiagnosisDate}
+              placeholder="예: 2024-06"
+              placeholderTextColor={Colors.TEXT_MUTED}
+            />
+          </View>
+
+          <TouchableOpacity
+            style={styles.continueButton}
+            onPress={() => navigation.navigate('StyleQuiz')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.continueButtonText}>다음으로</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </SafeAreaView>
     );
   }
@@ -387,8 +427,9 @@ export default function ScreeningScreen() {
           <TouchableOpacity
             style={styles.clinicButton}
             onPress={() => {
-              // Linking.openURL for clinic search would go here
-              Alert.alert('안내', '가까운 정신건강의학과를 검색합니다.');
+              Linking.openURL('https://map.naver.com/v5/search/정신건강의학과').catch(() => {
+                Alert.alert('안내', '브라우저를 열 수 없습니다.');
+              });
             }}
             activeOpacity={0.7}
           >
@@ -457,6 +498,34 @@ const styles = StyleSheet.create({
     fontSize: FontSize.MD,
     color: Colors.TEXT_SECONDARY,
     lineHeight: 20,
+  },
+
+  // --- Diagnosis ---
+  diagnosisContent: {
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 48,
+  },
+  diagnosisForm: {
+    marginTop: 32,
+    marginBottom: 32,
+  },
+  diagnosisLabel: {
+    fontFamily: Fonts.BOLD,
+    fontSize: FontSize.MD,
+    color: Colors.TEXT_SECONDARY,
+    marginBottom: 10,
+  },
+  diagnosisInput: {
+    backgroundColor: Colors.BG_INPUT,
+    borderRadius: 12,
+    height: 48,
+    paddingHorizontal: 16,
+    fontFamily: Fonts.REGULAR,
+    fontSize: FontSize.LG,
+    color: Colors.TEXT_PRIMARY,
+    borderWidth: 1,
+    borderColor: Colors.BORDER,
   },
 
   // --- Quiz ---

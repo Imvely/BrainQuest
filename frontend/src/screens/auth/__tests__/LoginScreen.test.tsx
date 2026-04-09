@@ -31,6 +31,11 @@ jest.mock('../../../utils/storage', () => ({
   setTokens: jest.fn(),
   setIsNewUser: jest.fn(),
   setHasCharacter: jest.fn(),
+  getAccessToken: jest.fn(),
+  getRefreshToken: jest.fn(),
+  clearTokens: jest.fn(),
+  getHasCharacter: jest.fn(() => false),
+  getIsNewUser: jest.fn(() => true),
 }));
 
 const mockLogin = login as jest.MockedFunction<typeof login>;
@@ -70,22 +75,48 @@ describe('LoginScreen', () => {
     jest.clearAllMocks();
   });
 
-  // 1. renders logo "BrainQuest" and subtitle
-  it('renders logo "BrainQuest" and subtitle', () => {
+  // 1. Renders BrainQuest logo text
+  it('renders BrainQuest logo text', () => {
     const { getByText } = render(<LoginScreen />);
     expect(getByText('BrainQuest')).toBeTruthy();
+  });
+
+  // 2. Renders subtitle
+  it('renders subtitle "ADHD를 위한 올인원 라이프 RPG"', () => {
+    const { getByText } = render(<LoginScreen />);
     expect(getByText('ADHD를 위한 올인원 라이프 RPG')).toBeTruthy();
   });
 
-  // 2. shows Kakao and Google login buttons
-  it('shows Kakao and Google login buttons', () => {
+  // 3. Renders Kakao and Google login buttons
+  it('renders Kakao and Google login buttons', () => {
     const { getByText } = render(<LoginScreen />);
     expect(getByText('카카오로 시작하기')).toBeTruthy();
     expect(getByText('Google로 시작하기')).toBeTruthy();
   });
 
-  // 3. pressing Kakao calls login API
-  it('pressing Kakao button calls login API with provider KAKAO', async () => {
+  // 4. Apple button only shows on iOS
+  describe('Apple login button platform behavior', () => {
+    const originalOS = Platform.OS;
+
+    afterEach(() => {
+      Object.defineProperty(Platform, 'OS', { value: originalOS });
+    });
+
+    it('shows Apple button on iOS', () => {
+      Object.defineProperty(Platform, 'OS', { value: 'ios' });
+      const { queryByText } = render(<LoginScreen />);
+      expect(queryByText(/Apple로 시작하기/)).toBeTruthy();
+    });
+
+    it('does not show Apple button on Android', () => {
+      Object.defineProperty(Platform, 'OS', { value: 'android' });
+      const { queryByText } = render(<LoginScreen />);
+      expect(queryByText(/Apple로 시작하기/)).toBeNull();
+    });
+  });
+
+  // 5. Tapping Kakao calls login API with provider KAKAO
+  it('tapping Kakao calls login API with provider KAKAO', async () => {
     mockLogin.mockResolvedValueOnce(SUCCESS_RESPONSE as any);
     const { getByText } = render(<LoginScreen />);
 
@@ -99,7 +130,7 @@ describe('LoginScreen', () => {
     );
   });
 
-  // 4. shows ActivityIndicator during login (loadingProvider state)
+  // 6. Shows ActivityIndicator while login in progress
   it('shows ActivityIndicator while login is in progress', async () => {
     let resolveLogin!: (value: any) => void;
     const pendingPromise = new Promise((resolve) => {
@@ -107,7 +138,7 @@ describe('LoginScreen', () => {
     });
     mockLogin.mockReturnValueOnce(pendingPromise as any);
 
-    const { getByText, queryByText, UNSAFE_root } = render(<LoginScreen />);
+    const { getByText, queryByText } = render(<LoginScreen />);
 
     await act(async () => {
       fireEvent.press(getByText('카카오로 시작하기'));
@@ -122,8 +153,8 @@ describe('LoginScreen', () => {
     });
   });
 
-  // 5. successful login stores tokens via storage utils
-  it('stores tokens and persistence flags on successful login', async () => {
+  // 7. On login success: calls setTokens, setUser, setIsNewUser, setHasCharacter
+  it('on login success calls setTokens, setUser, setIsNewUser, setHasCharacter', async () => {
     mockLogin.mockResolvedValueOnce(SUCCESS_RESPONSE as any);
     const { getByText } = render(<LoginScreen />);
 
@@ -134,13 +165,13 @@ describe('LoginScreen', () => {
     expect(mockSetTokens).toHaveBeenCalledWith('test-access-token', 'test-refresh-token');
     expect(mockPersistIsNewUser).toHaveBeenCalledWith(true);
     expect(mockPersistHasCharacter).toHaveBeenCalledWith(false);
-    expect(mockSetUser).toHaveBeenCalledWith(SUCCESS_RESPONSE.data.user);
     expect(mockSetIsNewUser).toHaveBeenCalledWith(true);
     expect(mockSetHasCharacter).toHaveBeenCalledWith(false);
+    expect(mockSetUser).toHaveBeenCalledWith(SUCCESS_RESPONSE.data.user);
   });
 
-  // 6. failed login shows alert
-  it('shows Alert on login failure', async () => {
+  // 8. On login failure: shows Alert
+  it('on login failure shows Alert', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     mockLogin.mockRejectedValueOnce(new Error('Network Error'));
 
@@ -155,8 +186,8 @@ describe('LoginScreen', () => {
     expect(mockSetTokens).not.toHaveBeenCalled();
   });
 
-  // 7. buttons disabled while loading
-  it('disables all buttons while a login request is in progress', async () => {
+  // 9. Disables all buttons while one login is in progress
+  it('disables all buttons while one login is in progress', async () => {
     let resolveLogin!: (value: any) => void;
     const pendingPromise = new Promise((resolve) => {
       resolveLogin = resolve;
@@ -213,15 +244,5 @@ describe('LoginScreen', () => {
     expect(mockSetUser).not.toHaveBeenCalled();
     expect(mockSetIsNewUser).not.toHaveBeenCalled();
     expect(mockSetHasCharacter).not.toHaveBeenCalled();
-  });
-
-  // Additional: Apple button platform check
-  it('only shows Apple button on iOS', () => {
-    const { queryByText } = render(<LoginScreen />);
-    if (Platform.OS === 'ios') {
-      expect(queryByText(/Apple로 시작하기/)).toBeTruthy();
-    } else {
-      expect(queryByText(/Apple로 시작하기/)).toBeNull();
-    }
   });
 });

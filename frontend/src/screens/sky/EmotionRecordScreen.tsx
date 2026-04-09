@@ -45,7 +45,7 @@ export default function EmotionRecordScreen() {
   const [showTags, setShowTags] = useState(false);
   const [showMemo, setShowMemo] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
-  const goBackTimer = useRef<ReturnType<typeof setTimeout>>();
+  const goBackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => { if (goBackTimer.current) clearTimeout(goBackTimer.current); };
@@ -121,7 +121,7 @@ export default function EmotionRecordScreen() {
       )}
 
       <Toast
-        message="+5 DEF EXP!"
+        message={`+5 DEF EXP 획득!`}
         visible={toastVisible}
         onHide={() => setToastVisible(false)}
         type="exp"
@@ -150,7 +150,7 @@ export default function EmotionRecordScreen() {
         {selectedWeather && (
           <Animated.View style={[styles.intensitySection, intensityStyle]}>
             <Text style={styles.sectionLabel}>감정 강도</Text>
-            <Text style={{ fontSize: emojiSize, textAlign: 'center' }}>
+            <Text style={[styles.emojiPreview, { fontSize: emojiSize }]}>
               {weatherConfig!.emoji}
             </Text>
             <View style={styles.intensityRow}>
@@ -418,8 +418,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.BORDER,
   },
   customTagBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 10,
     backgroundColor: Colors.PRIMARY,
     justifyContent: 'center',
@@ -467,5 +467,8 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.BOLD,
     fontSize: FontSize.LG,
     color: Colors.TEXT_PRIMARY,
+  },
+  emojiPreview: {
+    textAlign: 'center',
   },
 });

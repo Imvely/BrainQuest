@@ -97,6 +97,7 @@ export default function BattleScreen() {
   const isEndingRef = useRef(false);
   const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const penaltyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Mutations ──
   const startMut = useStartBattle();
@@ -194,6 +195,7 @@ export default function BattleScreen() {
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
+      if (penaltyTimeoutRef.current) clearTimeout(penaltyTimeoutRef.current);
     };
   }, []);
 
@@ -268,7 +270,8 @@ export default function BattleScreen() {
               resetComboTracker();
               setPenaltyType(penalty);
               setShowPenalty(true);
-              setTimeout(() => setShowPenalty(false), 3000);
+              if (penaltyTimeoutRef.current) clearTimeout(penaltyTimeoutRef.current);
+              penaltyTimeoutRef.current = setTimeout(() => setShowPenalty(false), 3000);
               Haptics.notificationAsync(
                 Haptics.NotificationFeedbackType.Warning,
               );
@@ -326,6 +329,10 @@ export default function BattleScreen() {
   );
 
   const handleStartBattle = useCallback(() => {
+    // Clear any existing countdown to prevent double-start leak
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+    if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
+
     store.setPlannedMin(selectedMin);
     store.setPhase('COUNTDOWN');
     isEndingRef.current = false;

@@ -1,70 +1,77 @@
 import { useQuestStore } from '../useQuestStore';
 import { Quest } from '../../types/quest';
 
-const mockQuest: Quest = {
-  id: 1,
+const createMockQuest = (id: number, overrides?: Partial<Quest>): Quest => ({
+  id,
   userId: 1,
-  originalTitle: '보고서 작성',
-  questTitle: '지식의 두루마리 작성',
-  questStory: '왕국의 기록을 남기는 중대한 임무입니다.',
+  originalTitle: `Task ${id}`,
+  questTitle: `Quest ${id}`,
+  questStory: `Story for quest ${id}`,
   category: 'WORK',
   grade: 'C',
-  estimatedMin: 60,
+  estimatedMin: 30,
   expReward: 50,
   goldReward: 30,
   status: 'ACTIVE',
   checkpoints: [],
-  createdAt: '2026-04-08T00:00:00',
-  updatedAt: '2026-04-08T00:00:00',
-};
+  createdAt: '2024-01-01T00:00:00',
+  updatedAt: '2024-01-01T00:00:00',
+  ...overrides,
+});
 
 describe('useQuestStore', () => {
   beforeEach(() => {
     useQuestStore.setState({ quests: [], activeQuest: null });
   });
 
-  describe('setQuests', () => {
-    it('sets the quest list', () => {
-      useQuestStore.getState().setQuests([mockQuest]);
-      expect(useQuestStore.getState().quests).toHaveLength(1);
-    });
+  it('has correct initial state', () => {
+    const state = useQuestStore.getState();
+    expect(state.quests).toEqual([]);
+    expect(state.activeQuest).toBeNull();
   });
 
-  describe('addQuest', () => {
-    it('prepends a quest to the list', () => {
-      const quest2 = { ...mockQuest, id: 2, questTitle: '두 번째 퀘스트' };
-      useQuestStore.getState().setQuests([mockQuest]);
-      useQuestStore.getState().addQuest(quest2);
-      expect(useQuestStore.getState().quests).toHaveLength(2);
-      expect(useQuestStore.getState().quests[0].id).toBe(2);
-    });
+  it('setQuests replaces the quest list', () => {
+    const quests = [createMockQuest(1), createMockQuest(2)];
+    useQuestStore.getState().setQuests(quests);
+    expect(useQuestStore.getState().quests).toHaveLength(2);
+    expect(useQuestStore.getState().quests[0].id).toBe(1);
   });
 
-  describe('updateQuest', () => {
-    it('updates a quest by id', () => {
-      useQuestStore.getState().setQuests([mockQuest]);
-      useQuestStore.getState().updateQuest(1, { status: 'COMPLETED' });
-      expect(useQuestStore.getState().quests[0].status).toBe('COMPLETED');
-    });
-
-    it('does not affect other quests', () => {
-      const quest2 = { ...mockQuest, id: 2 };
-      useQuestStore.getState().setQuests([mockQuest, quest2]);
-      useQuestStore.getState().updateQuest(1, { status: 'COMPLETED' });
-      expect(useQuestStore.getState().quests[1].status).toBe('ACTIVE');
-    });
+  it('setActiveQuest sets the active quest', () => {
+    const quest = createMockQuest(1);
+    useQuestStore.getState().setActiveQuest(quest);
+    expect(useQuestStore.getState().activeQuest).toEqual(quest);
   });
 
-  describe('setActiveQuest', () => {
-    it('sets active quest', () => {
-      useQuestStore.getState().setActiveQuest(mockQuest);
-      expect(useQuestStore.getState().activeQuest).toEqual(mockQuest);
-    });
+  it('setActiveQuest can set to null', () => {
+    const quest = createMockQuest(1);
+    useQuestStore.getState().setActiveQuest(quest);
+    useQuestStore.getState().setActiveQuest(null);
+    expect(useQuestStore.getState().activeQuest).toBeNull();
+  });
 
-    it('clears active quest with null', () => {
-      useQuestStore.getState().setActiveQuest(mockQuest);
-      useQuestStore.getState().setActiveQuest(null);
-      expect(useQuestStore.getState().activeQuest).toBeNull();
-    });
+  it('addQuest prepends to the quest list', () => {
+    useQuestStore.getState().setQuests([createMockQuest(1)]);
+    useQuestStore.getState().addQuest(createMockQuest(2));
+    const state = useQuestStore.getState();
+    expect(state.quests).toHaveLength(2);
+    expect(state.quests[0].id).toBe(2);
+    expect(state.quests[1].id).toBe(1);
+  });
+
+  it('updateQuest updates matching quest by id', () => {
+    useQuestStore.getState().setQuests([createMockQuest(1), createMockQuest(2)]);
+    useQuestStore.getState().updateQuest(1, { status: 'COMPLETED' });
+    const state = useQuestStore.getState();
+    expect(state.quests[0].status).toBe('COMPLETED');
+    expect(state.quests[1].status).toBe('ACTIVE');
+  });
+
+  it('updateQuest does not modify other quests', () => {
+    useQuestStore.getState().setQuests([createMockQuest(1), createMockQuest(2)]);
+    useQuestStore.getState().updateQuest(99, { status: 'COMPLETED' });
+    const state = useQuestStore.getState();
+    expect(state.quests[0].status).toBe('ACTIVE');
+    expect(state.quests[1].status).toBe('ACTIVE');
   });
 });

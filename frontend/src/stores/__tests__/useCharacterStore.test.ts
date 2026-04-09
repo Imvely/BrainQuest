@@ -4,19 +4,19 @@ import { Character } from '../../types/character';
 const mockCharacter: Character = {
   id: 1,
   userId: 1,
-  name: '용사',
+  name: 'Hero',
   classType: 'WARRIOR',
   level: 5,
-  exp: 200,
+  exp: 50,
   expToNext: 559,
   statAtk: 15,
   statWis: 12,
   statDef: 10,
-  statAgi: 11,
-  statHp: 120,
-  gold: 500,
+  statAgi: 10,
+  statHp: 100,
+  gold: 200,
   appearance: { hair: 'style1', outfit: 'outfit1', color: '#FF0000' },
-  equippedItems: { helmet: null, armor: null, weapon: 1, accessory: null },
+  equippedItems: { helmet: null, armor: null, weapon: null, accessory: null },
 };
 
 describe('useCharacterStore', () => {
@@ -24,40 +24,40 @@ describe('useCharacterStore', () => {
     useCharacterStore.setState({ character: null });
   });
 
-  it('has null character initially', () => {
-    expect(useCharacterStore.getState().character).toBeNull();
+  it('has initial state with character=null', () => {
+    const state = useCharacterStore.getState();
+    expect(state.character).toBeNull();
   });
 
-  describe('setCharacter', () => {
-    it('sets the character', () => {
-      useCharacterStore.getState().setCharacter(mockCharacter);
-      expect(useCharacterStore.getState().character).toEqual(mockCharacter);
-    });
+  it('setCharacter stores character object', () => {
+    useCharacterStore.getState().setCharacter(mockCharacter);
+    const state = useCharacterStore.getState();
+    expect(state.character).toEqual(mockCharacter);
   });
 
-  describe('addExp', () => {
-    it('adds exp to current character', () => {
-      useCharacterStore.getState().setCharacter(mockCharacter);
-      useCharacterStore.getState().addExp(50);
-      expect(useCharacterStore.getState().character!.exp).toBe(250);
-    });
-
-    it('does nothing when no character is set', () => {
-      useCharacterStore.getState().addExp(50);
-      expect(useCharacterStore.getState().character).toBeNull();
-    });
+  it('addExp increases character exp', () => {
+    useCharacterStore.getState().setCharacter(mockCharacter);
+    useCharacterStore.getState().addExp(30);
+    const state = useCharacterStore.getState();
+    expect(state.character!.exp).toBe(80);
   });
 
-  describe('addGold', () => {
-    it('adds gold to current character', () => {
-      useCharacterStore.getState().setCharacter(mockCharacter);
-      useCharacterStore.getState().addGold(100);
-      expect(useCharacterStore.getState().character!.gold).toBe(600);
-    });
+  it('addGold increases character gold', () => {
+    useCharacterStore.getState().setCharacter(mockCharacter);
+    useCharacterStore.getState().addGold(100);
+    const state = useCharacterStore.getState();
+    expect(state.character!.gold).toBe(300);
+  });
 
-    it('does nothing when no character is set', () => {
-      useCharacterStore.getState().addGold(100);
-      expect(useCharacterStore.getState().character).toBeNull();
-    });
+  it('addExp with null character does nothing', () => {
+    useCharacterStore.getState().addExp(30);
+    const state = useCharacterStore.getState();
+    expect(state.character).toBeNull();
+  });
+
+  it('addGold with null character does nothing', () => {
+    useCharacterStore.getState().addGold(100);
+    const state = useCharacterStore.getState();
+    expect(state.character).toBeNull();
   });
 });

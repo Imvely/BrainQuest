@@ -1,17 +1,20 @@
 import React from 'react';
-import { render, fireEvent, act } from '@testing-library/react-native';
+import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import EmotionRecordScreen from '../EmotionRecordScreen';
 
-// --- Navigation mock ---
+// ---------------------------------------------------------------------------
+// Navigation mock
+// ---------------------------------------------------------------------------
 const mockGoBack = jest.fn();
 jest.mock('@react-navigation/native', () => ({
   ...jest.requireActual('@react-navigation/native'),
   useNavigation: () => ({ navigate: jest.fn(), goBack: mockGoBack }),
 }));
 
-// --- Hook mocks ---
+// ---------------------------------------------------------------------------
+// Hook mocks
+// ---------------------------------------------------------------------------
 const mockMutate = jest.fn();
 jest.mock('../../../hooks/useEmotions', () => ({
   useCreateEmotion: () => ({
@@ -33,41 +36,44 @@ jest.mock('../../../stores/useEmotionStore', () => ({
   ),
 }));
 
-// --- Helpers ---
-function renderWithProviders(ui: React.ReactElement) {
-  const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
-  });
-  return render(
-    <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>,
-  );
-}
-
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 function setupMutateCallbacks() {
   let captured: { onSuccess?: (data: unknown) => void; onError?: () => void } = {};
   mockMutate.mockImplementation((_payload: unknown, callbacks: typeof captured) => {
     captured = callbacks || {};
   });
   return {
-    triggerSuccess: (data: unknown) => captured.onSuccess?.(data),
+    triggerSuccess: (data?: unknown) => captured.onSuccess?.(data),
     triggerError: () => captured.onError?.(),
   };
 }
 
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 describe('EmotionRecordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockState.todayCount = 2;
   });
 
-  it('renders title and counter', () => {
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
-    expect(getByText('지금 당신의 하늘은?')).toBeTruthy();
-    expect(getByText('2/5')).toBeTruthy();
+  // 1. Renders header with "감정 기록" title
+  it('renders "감정 기록" header', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
+    expect(getByText('감정 기록')).toBeTruthy();
   });
 
-  it('shows all 7 weather options', () => {
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
+  // 2. Shows "지금 당신의 하늘은?" text
+  it('shows "지금 당신의 하늘은?" text', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
+    expect(getByText('지금 당신의 하늘은?')).toBeTruthy();
+  });
+
+  // 3. Renders weather picker with all 7 weather types
+  it('renders weather picker with all 7 weather types', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
     expect(getByText('맑음')).toBeTruthy();
     expect(getByText('구름 약간')).toBeTruthy();
     expect(getByText('흐림')).toBeTruthy();
@@ -77,46 +83,80 @@ describe('EmotionRecordScreen', () => {
     expect(getByText('폭풍')).toBeTruthy();
   });
 
-  it('shows intensity section after weather selection', () => {
-    const { getByText, queryByText } = renderWithProviders(<EmotionRecordScreen />);
+  // 4. Submit button not visible when no weather selected
+  it('does not show submit button when no weather is selected', () => {
+    const { queryByText } = render(<EmotionRecordScreen />);
+    expect(queryByText('기록하기')).toBeNull();
+  });
+
+  // 5. Selecting a weather shows intensity section
+  it('shows intensity section after selecting a weather', () => {
+    const { getByText, queryByText } = render(<EmotionRecordScreen />);
     expect(queryByText('감정 강도')).toBeNull();
 
     fireEvent.press(getByText('맑음'));
     expect(getByText('감정 강도')).toBeTruthy();
+  });
+
+  // 6. Intensity shows 5 levels with default at 3/5
+  it('shows intensity default value "3 / 5"', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('맑음'));
     expect(getByText('3 / 5')).toBeTruthy();
   });
 
-  it('shows tags section when toggled', () => {
-    const { getByText, queryByText } = renderWithProviders(<EmotionRecordScreen />);
+  // 7. Shows tag section when toggled
+  it('shows tag section with preset tags when toggled', () => {
+    const { getByText, queryByText } = render(<EmotionRecordScreen />);
     fireEvent.press(getByText('맑음'));
 
+    // Tags not visible initially
     expect(queryByText('#회의후')).toBeNull();
+
+    // Toggle tags open
     fireEvent.press(getByText('태그'));
     expect(getByText('#회의후')).toBeTruthy();
     expect(getByText('#피곤')).toBeTruthy();
     expect(getByText('#RSD')).toBeTruthy();
+    expect(getByText('#약물복용후')).toBeTruthy();
+    expect(getByText('#수면부족')).toBeTruthy();
   });
 
-  it('shows memo section when toggled', () => {
+  // 8. Shows memo input with placeholder
+  it('shows memo input with placeholder when toggled', () => {
     const { getByText, getByPlaceholderText, queryByPlaceholderText } =
-      renderWithProviders(<EmotionRecordScreen />);
+      render(<EmotionRecordScreen />);
     fireEvent.press(getByText('맑음'));
 
     expect(queryByPlaceholderText(/오늘의 감정에 대해/)).toBeNull();
+
     fireEvent.press(getByText('메모'));
-    expect(getByPlaceholderText(/오늘의 감정에 대해/)).toBeTruthy();
+    expect(getByPlaceholderText('오늘의 감정에 대해 적어보세요...')).toBeTruthy();
   });
 
-  it('shows "기록하기" button after weather selection', () => {
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
+  // 9. Memo character counter shows "0/200"
+  it('shows memo character counter "0/200" when memo is open', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
     fireEvent.press(getByText('맑음'));
-    expect(getByText('기록하기')).toBeTruthy();
+    fireEvent.press(getByText('메모'));
+    expect(getByText('0/200')).toBeTruthy();
   });
 
-  it('submits emotion record with correct payload', async () => {
-    mockMutate.mockImplementation(() => {});
+  // 10. Typing in memo updates character counter
+  it('updates character counter as user types', () => {
+    const { getByText, getByPlaceholderText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('맑음'));
+    fireEvent.press(getByText('메모'));
 
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
+    const memoInput = getByPlaceholderText('오늘의 감정에 대해 적어보세요...');
+    fireEvent.changeText(memoInput, '좋아요');
+    expect(getByText('3/200')).toBeTruthy();
+  });
+
+  // 11. Submit button calls createEmotion mutation
+  it('calls createEmotion mutation on submit', async () => {
+    mockMutate.mockImplementation(() => {});
+    const { getByText } = render(<EmotionRecordScreen />);
     fireEvent.press(getByText('맑음'));
 
     await act(async () => {
@@ -136,11 +176,44 @@ describe('EmotionRecordScreen', () => {
     );
   });
 
+  // 12. Shows daily limit counter "{count}/{max}"
+  it('shows daily limit counter "2/5"', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
+    expect(getByText('2/5')).toBeTruthy();
+  });
+
+  // 13. Disables submit when daily limit reached
+  it('shows "오늘 기록 완료" when daily limit reached', () => {
+    mockState.todayCount = 5;
+    const { getByText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('맑음'));
+    expect(getByText('오늘 기록 완료')).toBeTruthy();
+    expect(getByText('5/5')).toBeTruthy();
+  });
+
+  // 14. Toast appears on successful submission
+  it('shows toast on successful submission', async () => {
+    const { triggerSuccess } = setupMutateCallbacks();
+    const { getByText, queryByText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('맑음'));
+
+    await act(async () => {
+      fireEvent.press(getByText('기록하기'));
+    });
+
+    await act(async () => {
+      triggerSuccess({});
+    });
+
+    // Toast component renders reward message
+    expect(getByText('+5 DEF EXP 획득!')).toBeTruthy();
+  });
+
+  // 15. Shows alert on submission error
   it('shows alert on submission error', async () => {
     const alertSpy = jest.spyOn(Alert, 'alert');
     const { triggerError } = setupMutateCallbacks();
-
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
+    const { getByText } = render(<EmotionRecordScreen />);
     fireEvent.press(getByText('맑음'));
 
     await act(async () => {
@@ -155,19 +228,26 @@ describe('EmotionRecordScreen', () => {
     alertSpy.mockRestore();
   });
 
-  it('disables submit when daily limit reached', () => {
-    mockState.todayCount = 5;
-
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
-    expect(getByText('5/5')).toBeTruthy();
-
-    fireEvent.press(getByText('맑음'));
-    expect(getByText('오늘 기록 완료')).toBeTruthy();
-  });
-
-  it('navigates back on header back button', () => {
-    const { getByText } = renderWithProviders(<EmotionRecordScreen />);
+  // 16. Navigates back on header back button
+  it('navigates back on header back button press', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
     fireEvent.press(getByText('<'));
     expect(mockGoBack).toHaveBeenCalled();
+  });
+
+  // 17. Selecting different weather types works
+  it('can select different weather types', () => {
+    const { getByText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('비'));
+    expect(getByText('감정 강도')).toBeTruthy();
+    expect(getByText('기록하기')).toBeTruthy();
+  });
+
+  // 18. Custom tag input
+  it('shows custom tag input inside tags section', () => {
+    const { getByText, getByPlaceholderText } = render(<EmotionRecordScreen />);
+    fireEvent.press(getByText('맑음'));
+    fireEvent.press(getByText('태그'));
+    expect(getByPlaceholderText('커스텀 태그')).toBeTruthy();
   });
 });

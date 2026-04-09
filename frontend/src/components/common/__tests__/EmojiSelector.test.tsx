@@ -2,58 +2,67 @@ import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import EmojiSelector from '../EmojiSelector';
 
-const OPTIONS = [
-  { value: 1, emoji: '😴', label: '나쁨' },
-  { value: 2, emoji: '😐', label: '보통' },
-  { value: 3, emoji: '😊', label: '좋음' },
+const mockOptions = [
+  { value: 1, emoji: '😴', label: 'Bad' },
+  { value: 2, emoji: '😐', label: 'Okay' },
+  { value: 3, emoji: '😊', label: 'Good' },
 ];
 
 describe('EmojiSelector', () => {
-  it('renders all options', () => {
-    const { getByText } = render(
-      <EmojiSelector options={OPTIONS} selected={null} onSelect={jest.fn()} />,
-    );
-    expect(getByText('나쁨')).toBeTruthy();
-    expect(getByText('보통')).toBeTruthy();
-    expect(getByText('좋음')).toBeTruthy();
+  const defaultProps = {
+    options: mockOptions,
+    selected: null as number | null,
+    onSelect: jest.fn(),
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('renders all options with emojis and labels', () => {
+    const { getByText } = render(<EmojiSelector {...defaultProps} />);
+    mockOptions.forEach((opt) => {
+      expect(getByText(opt.emoji)).toBeTruthy();
+      expect(getByText(opt.label)).toBeTruthy();
+    });
   });
 
   it('renders label when provided', () => {
     const { getByText } = render(
-      <EmojiSelector options={OPTIONS} selected={null} onSelect={jest.fn()} label="수면의 질" />,
+      <EmojiSelector {...defaultProps} label="How are you?" />
     );
-    expect(getByText('수면의 질')).toBeTruthy();
+    expect(getByText('How are you?')).toBeTruthy();
   });
 
   it('does not render label when not provided', () => {
-    const { queryByText } = render(
-      <EmojiSelector options={OPTIONS} selected={null} onSelect={jest.fn()} />,
-    );
-    expect(queryByText('수면의 질')).toBeNull();
+    const { queryByText } = render(<EmojiSelector {...defaultProps} />);
+    expect(queryByText('How are you?')).toBeNull();
   });
 
-  it('calls onSelect when option is tapped', () => {
+  it('calls onSelect with correct value when option is tapped', () => {
     const onSelect = jest.fn();
     const { getByText } = render(
-      <EmojiSelector options={OPTIONS} selected={null} onSelect={onSelect} />,
+      <EmojiSelector {...defaultProps} onSelect={onSelect} />
     );
-    fireEvent.press(getByText('좋음'));
+    fireEvent.press(getByText('😊'));
     expect(onSelect).toHaveBeenCalledWith(3);
   });
 
-  it('renders emojis', () => {
-    const { getByText } = render(
-      <EmojiSelector options={OPTIONS} selected={null} onSelect={jest.fn()} />,
-    );
-    OPTIONS.forEach((opt) => {
-      expect(getByText(opt.emoji)).toBeTruthy();
-    });
-  });
-
-  it('handles empty options gracefully', () => {
+  it('highlights selected option with border', () => {
     const { toJSON } = render(
-      <EmojiSelector options={[]} selected={null} onSelect={jest.fn()} />,
+      <EmojiSelector {...defaultProps} selected={2} />
     );
-    expect(toJSON()).toBeTruthy();
+    const tree = toJSON();
+    // The structure is: container > [label?, row]
+    // row contains TouchableOpacity children for each option
+    const row = tree.children.find(
+      (c: any) => c.props?.style && Array.isArray(c.children) && c.children.length === mockOptions.length
+    ) || tree.children[tree.children.length - 1];
+    // The second option (value=2) should have selectedOption style with borderWidth
+    const secondOption = row.children[1];
+    const flatStyle = Array.isArray(secondOption.props.style)
+      ? Object.assign({}, ...secondOption.props.style.filter(Boolean))
+      : secondOption.props.style;
+    expect(flatStyle.borderWidth).toBe(1);
   });
 });
