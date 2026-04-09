@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as mapApi from '../api/map';
 import { TimeBlockCreateRequest } from '../types/timeline';
+import { STALE_TIME } from '../constants/query';
 
 export function useTimeline(date: string) {
   return useQuery({
     queryKey: ['timeline', date],
     queryFn: () => mapApi.getTimeline(date),
     select: (res) => res.data,
-    staleTime: 30000,
-    refetchInterval: 60000,
+    staleTime: STALE_TIME.FAST,
+    refetchInterval: STALE_TIME.NORMAL,
   });
 }
 

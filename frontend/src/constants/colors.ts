@@ -47,6 +47,11 @@ export const Colors = {
   CATEGORY_REST: '#FDCB6E',
   CATEGORY_CUSTOM: '#636E72',
 
+  // Misc
+  GOLD: '#FDCB6E',
+  ELAPSED_OVERLAY: 'rgba(15, 10, 42, 0.5)',
+  REWARD_FLOAT: 'rgba(0, 206, 201, 0.9)',
+
   // Tab bar
   TAB_ACTIVE: '#6C5CE7',
   TAB_INACTIVE: '#6C6C8A',

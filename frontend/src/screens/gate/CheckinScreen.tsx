@@ -129,7 +129,7 @@ export default function CheckinScreen() {
   // --- Completed State ---
   if (completed && result) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Animated.View style={[styles.confettiOverlay, confettiStyle]}>
           <Text style={styles.confettiText}>{'🎉'}</Text>
         </Animated.View>
@@ -179,7 +179,7 @@ export default function CheckinScreen() {
 
   // --- Form ---
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backBtnText}>{'<'}</Text>
@@ -356,9 +356,9 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   sliderBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.BG_CARD,
     justifyContent: 'center',
     alignItems: 'center',

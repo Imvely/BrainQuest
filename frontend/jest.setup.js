@@ -75,12 +75,30 @@ jest.mock('expo-av', () => ({
   },
 }));
 
+// Mock react-native-safe-area-context
+jest.mock('react-native-safe-area-context', () => {
+  const RN = require('react-native');
+  return {
+    SafeAreaProvider: ({ children }) => children,
+    SafeAreaView: RN.View,
+    useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }),
+  };
+});
+
 // Mock react-native-reanimated (v4 compatible)
 jest.mock('react-native-reanimated', () => {
   const RN = require('react-native');
   const AnimatedView = RN.View;
   const AnimatedText = RN.Text;
   const AnimatedScrollView = RN.ScrollView;
+  const makeFadeAnim = () => {
+    const obj = {
+      duration: () => obj,
+      delay: () => obj,
+      springify: () => obj,
+    };
+    return obj;
+  };
   return {
     __esModule: true,
     default: {
@@ -98,12 +116,21 @@ jest.mock('react-native-reanimated', () => {
     withTiming: (v) => v,
     withSpring: (v) => v,
     withDelay: (_, v) => v,
+    withRepeat: (v) => v,
     withSequence: (...args) => args[args.length - 1],
-    Easing: { out: (fn) => fn, cubic: (v) => v, linear: (v) => v, bezier: () => (v) => v },
+    Easing: {
+      out: (fn) => fn,
+      cubic: (v) => v,
+      linear: (v) => v,
+      bezier: () => (v) => v,
+      inOut: (fn) => fn,
+      ease: (v) => v,
+    },
     createAnimatedComponent: (component) => component,
     runOnJS: (fn) => fn,
-    FadeIn: { duration: () => ({ delay: () => ({}) }) },
-    FadeOut: { duration: () => ({ delay: () => ({}) }) },
+    FadeIn: makeFadeAnim(),
+    FadeInDown: makeFadeAnim(),
+    FadeOut: makeFadeAnim(),
     Layout: {},
   };
 });

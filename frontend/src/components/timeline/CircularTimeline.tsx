@@ -16,6 +16,7 @@ import Animated, {
 import { TimeBlock, BlockCategory } from '../../types/timeline';
 import { Colors } from '../../constants/colors';
 import { Fonts } from '../../constants/fonts';
+import { parseHHMM } from '../../utils/time';
 
 // --- Constants ---
 const SIZE = 300;
@@ -38,11 +39,7 @@ const CATEGORY_COLORS: Record<BlockCategory, string> = {
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // --- Helpers ---
-
-function timeToMin(t: string): number {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + (m || 0);
-}
+const timeToMin = parseHHMM;
 
 function minToAngle(min: number): number {
   return (min / TOTAL_MIN) * 360 - 90;
@@ -164,6 +161,24 @@ export default function CircularTimeline({
   const remainM = remainingMin % 60;
   const remainText = `${remainH}h ${String(remainM).padStart(2, '0')}m`;
 
+  // Pre-compute block arcs to avoid recalculation in render
+  const blockArcs = useMemo(
+    () =>
+      sortedBlocks
+        .map((block) => {
+          const bStart = timeToMin(block.startTime);
+          const bEnd = timeToMin(block.endTime);
+          const d = arcPath(bStart, bEnd);
+          if (!d) return null;
+          const color = CATEGORY_COLORS[block.category] || CATEGORY_COLORS.CUSTOM;
+          const opacity =
+            block.status === 'COMPLETED' ? 1.0 : block.status === 'IN_PROGRESS' ? 0.85 : 0.5;
+          return { id: block.id, d, color, opacity };
+        })
+        .filter(Boolean) as { id: number; d: string; color: string; opacity: number }[],
+    [sortedBlocks],
+  );
+
   // Handle tap on SVG area
   const handlePress = useCallback(
     (evt: { nativeEvent: { locationX: number; locationY: number } }) => {
@@ -226,37 +241,24 @@ export default function CircularTimeline({
           <Path
             d={elapsedArc}
             fill="none"
-            stroke="rgba(15, 10, 42, 0.5)"
+            stroke={Colors.ELAPSED_OVERLAY}
             strokeWidth={STROKE_W}
             strokeLinecap="butt"
           />
         ) : null}
 
-        {/* Time block arcs */}
-        {sortedBlocks.map((block) => {
-          const bStart = timeToMin(block.startTime);
-          const bEnd = timeToMin(block.endTime);
-          const d = arcPath(bStart, bEnd);
-          if (!d) return null;
-          const color = CATEGORY_COLORS[block.category] || CATEGORY_COLORS.CUSTOM;
-          const opacity =
-            block.status === 'COMPLETED'
-              ? 1.0
-              : block.status === 'IN_PROGRESS'
-                ? 0.85
-                : 0.5;
-          return (
-            <Path
-              key={block.id}
-              d={d}
-              fill="none"
-              stroke={color}
-              strokeWidth={STROKE_W - 2}
-              strokeLinecap="butt"
-              opacity={opacity}
-            />
-          );
-        })}
+        {/* Time block arcs (pre-computed) */}
+        {blockArcs.map(({ id, d, color, opacity }) => (
+          <Path
+            key={id}
+            d={d}
+            fill="none"
+            stroke={color}
+            strokeWidth={STROKE_W - 2}
+            strokeLinecap="butt"
+            opacity={opacity}
+          />
+        ))}
 
         {/* Hour tick marks & labels */}
         {HOUR_TICKS.map((h) => {

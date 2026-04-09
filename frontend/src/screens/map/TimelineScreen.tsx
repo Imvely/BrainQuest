@@ -31,6 +31,8 @@ import { useEmotionStore } from '../../stores/useEmotionStore';
 import { useTimelineStore } from '../../stores/useTimelineStore';
 import { useAuthStore } from '../../stores/useAuthStore';
 
+import { parseHHMM } from '../../utils/time';
+
 // --- Category colors (for quest grade badge) ---
 const GRADE_COLORS: Record<string, string> = {
   E: Colors.GRADE_E,
@@ -39,13 +41,6 @@ const GRADE_COLORS: Record<string, string> = {
   B: Colors.GRADE_B,
   A: Colors.GRADE_A,
 };
-
-// --- Helpers ---
-
-function parseHHMM(t: string): number {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + (m || 0);
-}
 
 export default function TimelineScreen() {
   const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>();

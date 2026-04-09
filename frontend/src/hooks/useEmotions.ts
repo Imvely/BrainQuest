@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as skyApi from '../api/sky';
 import { EmotionRecordRequest } from '../types/emotion';
+import { STALE_TIME } from '../constants/query';
 
 export function useEmotionCalendar(yearMonth: string) {
   return useQuery({
     queryKey: ['emotionCalendar', yearMonth],
     queryFn: () => skyApi.getEmotionCalendar(yearMonth),
     select: (res) => res.data,
-    staleTime: 60000,
+    staleTime: STALE_TIME.NORMAL,
   });
 }
 
@@ -16,7 +17,7 @@ export function useWeeklySummary() {
     queryKey: ['weeklySummary'],
     queryFn: () => skyApi.getWeeklySummary(),
     select: (res) => res.data,
-    staleTime: 60000,
+    staleTime: STALE_TIME.NORMAL,
   });
 }
 

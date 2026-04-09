@@ -1,6 +1,12 @@
 import { format, differenceInMinutes, parse } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
+/** Parse "HH:mm" string to total minutes from midnight */
+export function parseHHMM(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+
 export function minutesToHHMM(minutes: number): string {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;

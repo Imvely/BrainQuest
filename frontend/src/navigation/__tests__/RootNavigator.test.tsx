@@ -26,15 +26,31 @@ jest.mock('@react-navigation/bottom-tabs', () => ({
 }));
 
 jest.mock('react-native-reanimated', () => {
-  const { View } = require('react-native');
+  const RN = require('react-native');
+  const makeFadeAnim = () => {
+    const obj: any = { duration: () => obj, delay: () => obj, springify: () => obj };
+    return obj;
+  };
   return {
     __esModule: true,
-    default: { createAnimatedComponent: (c: any) => c || View },
+    default: {
+      createAnimatedComponent: (c: any) => c || RN.View,
+      View: RN.View,
+      Text: RN.Text,
+      ScrollView: RN.ScrollView,
+    },
     useSharedValue: (v: number) => ({ value: v }),
     useAnimatedProps: (fn: () => any) => { try { return fn(); } catch { return {}; } },
     useAnimatedStyle: (fn: () => any) => { try { return fn(); } catch { return {}; } },
     withTiming: (v: number) => v,
-    Easing: { inOut: () => (v: number) => v, ease: (v: number) => v },
+    withRepeat: (v: number) => v,
+    withDelay: (_: number, v: number) => v,
+    withSequence: (...args: number[]) => args[args.length - 1],
+    Easing: { inOut: () => (v: number) => v, ease: (v: number) => v, linear: (v: number) => v },
+    runOnJS: (fn: any) => fn,
+    FadeIn: makeFadeAnim(),
+    FadeInDown: makeFadeAnim(),
+    FadeOut: makeFadeAnim(),
   };
 });
 

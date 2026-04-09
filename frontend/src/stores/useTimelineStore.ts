@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TimeBlock } from '../types/timeline';
+import { parseHHMM } from '../utils/time';
 
 function getTodayString(): string {
   const d = new Date();
@@ -7,11 +8,6 @@ function getTodayString(): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
-}
-
-function parseHHMM(t: string): number {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + (m || 0);
 }
 
 interface TimelineState {
