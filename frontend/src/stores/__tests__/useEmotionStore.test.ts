@@ -34,6 +34,8 @@ describe('useEmotionStore', () => {
   beforeEach(() => {
     useEmotionStore.setState({
       recentRecords: [],
+      todayCount: 0,
+      recentWeather: null,
       calendar: [],
       weeklySummary: null,
     });
@@ -47,6 +49,31 @@ describe('useEmotionStore', () => {
       const records = useEmotionStore.getState().recentRecords;
       expect(records).toHaveLength(2);
       expect(records[0].id).toBe(2);
+    });
+
+    it('increments todayCount', () => {
+      expect(useEmotionStore.getState().todayCount).toBe(0);
+      useEmotionStore.getState().addRecord(mockRecord);
+      expect(useEmotionStore.getState().todayCount).toBe(1);
+      useEmotionStore.getState().addRecord({ ...mockRecord, id: 2 });
+      expect(useEmotionStore.getState().todayCount).toBe(2);
+    });
+
+    it('updates recentWeather', () => {
+      expect(useEmotionStore.getState().recentWeather).toBeNull();
+      useEmotionStore.getState().addRecord(mockRecord);
+      expect(useEmotionStore.getState().recentWeather).toBe('SUNNY');
+
+      const rainRecord = { ...mockRecord, id: 2, weatherType: 'RAIN' as const };
+      useEmotionStore.getState().addRecord(rainRecord);
+      expect(useEmotionStore.getState().recentWeather).toBe('RAIN');
+    });
+  });
+
+  describe('setTodayCount', () => {
+    it('sets the today count directly', () => {
+      useEmotionStore.getState().setTodayCount(3);
+      expect(useEmotionStore.getState().todayCount).toBe(3);
     });
   });
 
