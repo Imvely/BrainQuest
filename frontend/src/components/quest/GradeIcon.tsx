@@ -12,11 +12,11 @@ import { Fonts, FontSize } from '../../constants/fonts';
 import { QuestGrade } from '../../constants/game';
 
 const GRADE_COLORS: Record<QuestGrade, string> = {
-  E: '#00B894',
-  D: '#0984E3',
-  C: '#E17055',
-  B: '#D63031',
-  A: Colors.PRIMARY,
+  E: Colors.GRADE_E,
+  D: Colors.GRADE_D,
+  C: Colors.GRADE_C,
+  B: Colors.GRADE_B,
+  A: Colors.GRADE_A,
 };
 
 interface GradeIconProps {

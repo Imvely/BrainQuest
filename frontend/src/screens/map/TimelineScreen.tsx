@@ -99,7 +99,7 @@ export default function TimelineScreen() {
         ],
       );
     },
-    [deleteBlock],
+    [deleteBlock, selectedDate],
   );
 
   const handleCreateBlock = useCallback(

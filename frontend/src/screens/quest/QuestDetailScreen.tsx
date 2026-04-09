@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -46,6 +46,13 @@ export default function QuestDetailScreen() {
   const [rewardVisible, setRewardVisible] = useState(false);
   const [rewardData, setRewardData] = useState<{ exp: number; gold: number } | null>(null);
   const [questComplete, setQuestComplete] = useState(false);
+  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timerRefs.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Floating reward animation
   const rewardOpacity = useSharedValue(0);
@@ -68,7 +75,7 @@ export default function QuestDetailScreen() {
       );
       rewardTranslateY.value = withTiming(-80, { duration: 1800 });
 
-      setTimeout(() => setRewardVisible(false), 2000);
+      timerRefs.current.push(setTimeout(() => setRewardVisible(false), 2000));
     },
     [rewardOpacity, rewardTranslateY],
   );
@@ -93,10 +100,10 @@ export default function QuestDetailScreen() {
             // Check if all checkpoints are now completed
             const newCompleted = completed + 1;
             if (newCompleted >= total) {
-              setTimeout(() => {
+              timerRefs.current.push(setTimeout(() => {
                 setQuestComplete(true);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              }, 1500);
+              }, 1500));
             }
           },
           onError: () => {
