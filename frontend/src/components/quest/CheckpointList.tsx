@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useRef, useEffect } from 'react';
+import React, { memo, useCallback, useMemo, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -28,7 +28,10 @@ export default memo(function CheckpointList({
   onComplete,
   onBattle,
 }: CheckpointListProps) {
-  const sorted = [...checkpoints].sort((a, b) => a.orderNum - b.orderNum);
+  const sorted = useMemo(
+    () => [...checkpoints].sort((a, b) => a.orderNum - b.orderNum),
+    [checkpoints],
+  );
 
   return (
     <View style={styles.container}>

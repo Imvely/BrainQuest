@@ -7,6 +7,10 @@ import {
   getMedications,
   createMedication,
   createMedLog,
+  updateMedLog,
+  getTodayCheckins,
+  updateMedication,
+  deleteMedication,
 } from '../gate';
 
 jest.mock('../client', () => ({
@@ -174,6 +178,81 @@ describe('gate API', () => {
         medicationId: 1,
         effectiveness: 2,
       });
+    });
+  });
+
+  // --- updateMedLog ---
+  describe('updateMedLog', () => {
+    it('calls PUT /gate/med-logs/{id} with effectiveness and sideEffects', async () => {
+      (mockApiClient.put as jest.Mock).mockResolvedValue({
+        data: { success: true, data: { id: 1, effectiveness: 3, sideEffects: ['두통'] } },
+      });
+
+      const result = await updateMedLog(1, { effectiveness: 3, sideEffects: ['두통'] });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/med-logs/1', {
+        effectiveness: 3,
+        sideEffects: ['두통'],
+      });
+      expect(result.data.effectiveness).toBe(3);
+    });
+
+    it('propagates errors', async () => {
+      (mockApiClient.put as jest.Mock).mockRejectedValue(new Error('404'));
+      await expect(updateMedLog(999, { effectiveness: 1 })).rejects.toThrow('404');
+    });
+  });
+
+  // --- getTodayCheckins ---
+  describe('getTodayCheckins', () => {
+    it('calls GET /gate/checkin/history with from/to date params', async () => {
+      (mockApiClient.get as jest.Mock).mockResolvedValue({
+        data: { success: true, data: [{ id: 1, checkinType: 'MORNING' }] },
+      });
+
+      const result = await getTodayCheckins('2026-04-09');
+      expect(mockApiClient.get).toHaveBeenCalledWith('/gate/checkin/history', {
+        params: { from: '2026-04-09', to: '2026-04-09' },
+      });
+      expect(result.data).toHaveLength(1);
+    });
+  });
+
+  // --- updateMedication ---
+  describe('updateMedication', () => {
+    it('calls PUT /gate/medications/{id} to deactivate', async () => {
+      (mockApiClient.put as jest.Mock).mockResolvedValue({
+        data: { success: true, data: { id: 1, isActive: false } },
+      });
+
+      const result = await updateMedication(1, { isActive: false });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/medications/1', { isActive: false });
+      expect(result.data.isActive).toBe(false);
+    });
+
+    it('supports partial updates', async () => {
+      (mockApiClient.put as jest.Mock).mockResolvedValue({
+        data: { success: true, data: { id: 1, dosage: '36mg' } },
+      });
+
+      await updateMedication(1, { dosage: '36mg' });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/medications/1', { dosage: '36mg' });
+    });
+  });
+
+  // --- deleteMedication ---
+  describe('deleteMedication', () => {
+    it('calls DELETE /gate/medications/{id}', async () => {
+      (mockApiClient.delete as jest.Mock).mockResolvedValue({
+        data: { success: true, data: null },
+      });
+
+      await deleteMedication(1);
+      expect(mockApiClient.delete).toHaveBeenCalledWith('/gate/medications/1');
+    });
+
+    it('propagates errors', async () => {
+      (mockApiClient.delete as jest.Mock).mockRejectedValue(new Error('403'));
+      await expect(deleteMedication(1)).rejects.toThrow('403');
     });
   });
 });

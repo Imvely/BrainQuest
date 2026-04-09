@@ -6,6 +6,7 @@ import {
   ItemDrop,
   PenaltyType,
 } from '../types/battle';
+import { MAX_COMBO } from '../constants/game';
 
 interface BattleState {
   phase: BattlePhase;
@@ -113,7 +114,7 @@ export const useBattleStore = create<BattleState>((set, get) => ({
 
   incrementCombo: () => {
     const { comboCount, maxCombo } = get();
-    const next = Math.min(comboCount + 1, 5);
+    const next = Math.min(comboCount + 1, MAX_COMBO);
     set({ comboCount: next, maxCombo: Math.max(maxCombo, next) });
   },
 

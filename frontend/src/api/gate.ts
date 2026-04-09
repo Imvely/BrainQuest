@@ -121,3 +121,37 @@ export async function createMedLog(request: MedLogRequest): Promise<ApiResponse<
   const { data } = await apiClient.post('/gate/med-logs', request);
   return data;
 }
+
+export interface MedLogUpdateRequest {
+  effectiveness?: number;
+  sideEffects?: string[];
+}
+
+export async function updateMedLog(id: number, request: MedLogUpdateRequest): Promise<ApiResponse<MedLog>> {
+  const { data } = await apiClient.put(`/gate/med-logs/${id}`, request);
+  return data;
+}
+
+export async function getTodayCheckins(date: string): Promise<ApiResponse<CheckinRecord[]>> {
+  const { data } = await apiClient.get('/gate/checkin/history', { params: { from: date, to: date } });
+  return data;
+}
+
+export async function updateMedication(id: number, request: Partial<MedicationRequest> & { isActive?: boolean }): Promise<ApiResponse<Medication>> {
+  const { data } = await apiClient.put(`/gate/medications/${id}`, request);
+  return data;
+}
+
+export async function deleteMedication(id: number): Promise<ApiResponse<void>> {
+  const { data } = await apiClient.delete(`/gate/medications/${id}`);
+  return data;
+}
+
+export interface DailySummary {
+  battleCount: number;
+  battleWins: number;
+  questCompleted: number;
+  questTotal: number;
+  dominantWeather: string | null;
+  achievementRate: number;
+}

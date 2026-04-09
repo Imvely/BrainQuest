@@ -181,14 +181,14 @@ export default function BattleScreen() {
     if (phase === 'FIGHTING' && monsterRemainingHp <= 0 && monsterMaxHp > 0) {
       handleBattleEnd('VICTORY');
     }
-  }, [phase, monsterRemainingHp, monsterMaxHp]);
+  }, [phase, monsterRemainingHp, monsterMaxHp, handleBattleEnd]);
 
   // Check character HP
   useEffect(() => {
     if (phase === 'FIGHTING' && characterHp <= 0 && characterMaxHp > 0) {
       handleBattleEnd('DEFEAT');
     }
-  }, [phase, characterHp, characterMaxHp]);
+  }, [phase, characterHp, characterMaxHp, handleBattleEnd]);
 
   // Cleanup on unmount
   useEffect(() => {
