@@ -37,3 +37,19 @@ export const STREAK_BONUS: Record<number, { exp: number; item?: boolean; rarity?
 export function requiredExpForLevel(level: number): number {
   return Math.floor(50 * Math.pow(level, 1.5));
 }
+
+export const MONSTER_CONFIG: Record<QuestGrade, { emoji: string; name: string }> = {
+  E: { emoji: '\u{1F7E2}', name: '슬라임' },
+  D: { emoji: '\u{1F47A}', name: '고블린' },
+  C: { emoji: '\u{1F479}', name: '오크' },
+  B: { emoji: '\u{1F409}', name: '드래곤' },
+  A: { emoji: '\u{1F608}', name: '마왕' },
+};
+
+export function getGradeFromMinutes(min: number): QuestGrade {
+  if (min <= 10) return 'E';
+  if (min <= 30) return 'D';
+  if (min <= 60) return 'C';
+  if (min <= 120) return 'B';
+  return 'A';
+}

@@ -18,6 +18,7 @@ export function useQuestDetail(id: number) {
     queryFn: () => questApi.getQuestDetail(id),
     select: (res) => res.data,
     enabled: id > 0,
+    staleTime: STALE_TIME.FAST,
   });
 }
 

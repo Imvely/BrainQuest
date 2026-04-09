@@ -29,6 +29,7 @@ export function useInventory() {
     queryKey: ['inventory'],
     queryFn: () => characterApi.getInventory(),
     select: (res) => res.data,
+    staleTime: STALE_TIME.NORMAL,
   });
 }
 

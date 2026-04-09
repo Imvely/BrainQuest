@@ -28,10 +28,14 @@ export function useUpdateTimeBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, ...request }: Partial<TimeBlockCreateRequest> & { id: number }) =>
+    mutationFn: ({ id, ...request }: Partial<TimeBlockCreateRequest> & { id: number; blockDate?: string }) =>
       mapApi.updateTimeBlock(id, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+    onSuccess: (_, variables) => {
+      if (variables.blockDate) {
+        queryClient.invalidateQueries({ queryKey: ['timeline', variables.blockDate] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      }
     },
   });
 }
@@ -40,9 +44,14 @@ export function useDeleteTimeBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: number) => mapApi.deleteTimeBlock(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['timeline'] });
+    mutationFn: ({ id, blockDate }: { id: number; blockDate?: string }) =>
+      mapApi.deleteTimeBlock(id),
+    onSuccess: (_, variables) => {
+      if (variables.blockDate) {
+        queryClient.invalidateQueries({ queryKey: ['timeline', variables.blockDate] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['timeline'] });
+      }
     },
   });
 }

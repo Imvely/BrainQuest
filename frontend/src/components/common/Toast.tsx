@@ -37,7 +37,7 @@ export default function Toast({ message, visible, onHide, duration = 2000, type 
       opacity.value = withTiming(1, { duration: 300 });
       translateY.value = withDelay(duration, withTiming(-80, { duration: 300 }));
       opacity.value = withDelay(duration, withTiming(0, { duration: 300 }, () => {
-        runOnJS(() => onHideRef.current())();
+        runOnJS(onHideRef.current)();
       }));
     }
   }, [visible, duration, translateY, opacity]);

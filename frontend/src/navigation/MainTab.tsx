@@ -50,7 +50,7 @@ function QuestNavigator() {
 }
 
 export type BattleStackParamList = {
-  BattleHome: undefined;
+  BattleHome: { questId?: number; checkpointId?: number } | undefined;
   BattleResult: { sessionId: number };
 };
 const BattleStack = createStackNavigator<BattleStackParamList>();

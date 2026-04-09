@@ -44,14 +44,15 @@ describe('battle API', () => {
   });
 
   describe('endBattle', () => {
-    it('calls POST /battle/:id/end', async () => {
+    it('calls POST /battle/:id/end with result and maxCombo', async () => {
+      const request = { result: 'VICTORY' as const, maxCombo: 3 };
       (mockApiClient.post as jest.Mock).mockResolvedValue({
-        data: { success: true, data: { result: 'VICTORY', expEarned: 50 } },
+        data: { success: true, data: { expEarned: 50, goldEarned: 30, itemDrops: [], levelUp: false, checkpointCompleted: false } },
       });
 
-      const result = await endBattle(5);
-      expect(mockApiClient.post).toHaveBeenCalledWith('/battle/5/end');
-      expect(result.data.result).toBe('VICTORY');
+      const result = await endBattle(5, request);
+      expect(mockApiClient.post).toHaveBeenCalledWith('/battle/5/end', request);
+      expect(result.data.expEarned).toBe(50);
     });
   });
 

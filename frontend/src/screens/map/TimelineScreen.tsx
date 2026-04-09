@@ -94,7 +94,7 @@ export default function TimelineScreen() {
           {
             text: '삭제',
             style: 'destructive',
-            onPress: () => deleteBlock.mutate(block.id),
+            onPress: () => deleteBlock.mutate({ id: block.id, blockDate: selectedDate }),
           },
         ],
       );

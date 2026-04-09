@@ -23,53 +23,85 @@ describe('useBattleStore', () => {
 
   it('has correct initial state', () => {
     const state = useBattleStore.getState();
-    expect(state.session).toBeNull();
-    expect(state.combo).toBe(0);
-    expect(state.isExited).toBe(false);
-    expect(state.elapsedSec).toBe(0);
+    expect(state.sessionId).toBeNull();
+    expect(state.comboCount).toBe(0);
+    expect(state.exitCount).toBe(0);
+    expect(state.remainingSeconds).toBe(0);
+    expect(state.phase).toBe('SETUP');
   });
 
-  describe('setSession', () => {
-    it('sets battle session', () => {
-      useBattleStore.getState().setSession(mockSession);
-      expect(useBattleStore.getState().session).toEqual(mockSession);
+  describe('startFighting', () => {
+    it('sets battle session and transitions to FIGHTING', () => {
+      useBattleStore.getState().setPlannedMin(25);
+      useBattleStore.getState().startFighting(mockSession);
+      const state = useBattleStore.getState();
+      expect(state.sessionId).toBe(1);
+      expect(state.phase).toBe('FIGHTING');
+      expect(state.monsterMaxHp).toBe(300);
+      expect(state.monsterRemainingHp).toBe(300);
     });
   });
 
-  describe('setCombo', () => {
-    it('updates combo count', () => {
-      useBattleStore.getState().setCombo(3);
-      expect(useBattleStore.getState().combo).toBe(3);
+  describe('incrementCombo', () => {
+    it('increments combo count up to max 5', () => {
+      useBattleStore.getState().incrementCombo();
+      expect(useBattleStore.getState().comboCount).toBe(1);
+      for (let i = 0; i < 5; i++) useBattleStore.getState().incrementCombo();
+      expect(useBattleStore.getState().comboCount).toBe(5);
     });
   });
 
-  describe('setIsExited', () => {
-    it('tracks exit state', () => {
-      useBattleStore.getState().setIsExited(true);
-      expect(useBattleStore.getState().isExited).toBe(true);
+  describe('applyDamage', () => {
+    it('reduces monster HP without going below 0', () => {
+      useBattleStore.getState().setPlannedMin(25);
+      useBattleStore.getState().startFighting(mockSession);
+      useBattleStore.getState().applyDamage(50);
+      expect(useBattleStore.getState().monsterRemainingHp).toBe(250);
+      useBattleStore.getState().applyDamage(999);
+      expect(useBattleStore.getState().monsterRemainingHp).toBe(0);
     });
   });
 
-  describe('setElapsedSec', () => {
-    it('updates elapsed seconds', () => {
-      useBattleStore.getState().setElapsedSec(300);
-      expect(useBattleStore.getState().elapsedSec).toBe(300);
+  describe('handleExit', () => {
+    it('increments exit count', () => {
+      useBattleStore.getState().handleExit();
+      expect(useBattleStore.getState().exitCount).toBe(1);
+      useBattleStore.getState().handleExit();
+      expect(useBattleStore.getState().exitCount).toBe(2);
+    });
+  });
+
+  describe('setResult', () => {
+    it('transitions to RESULT and stores rewards', () => {
+      useBattleStore.getState().setResult({
+        result: 'VICTORY',
+        expEarned: 50,
+        goldEarned: 30,
+        itemDrops: [],
+        levelUp: false,
+        checkpointCompleted: false,
+      });
+      const state = useBattleStore.getState();
+      expect(state.phase).toBe('RESULT');
+      expect(state.result).toBe('VICTORY');
+      expect(state.expEarned).toBe(50);
+      expect(state.isPerfectFocus).toBe(true);
     });
   });
 
   describe('reset', () => {
     it('resets all state to initial values', () => {
-      useBattleStore.getState().setSession(mockSession);
-      useBattleStore.getState().setCombo(5);
-      useBattleStore.getState().setIsExited(true);
-      useBattleStore.getState().setElapsedSec(600);
+      useBattleStore.getState().setPlannedMin(40);
+      useBattleStore.getState().startFighting(mockSession);
+      useBattleStore.getState().incrementCombo();
+      useBattleStore.getState().handleExit();
 
       useBattleStore.getState().reset();
       const state = useBattleStore.getState();
-      expect(state.session).toBeNull();
-      expect(state.combo).toBe(0);
-      expect(state.isExited).toBe(false);
-      expect(state.elapsedSec).toBe(0);
+      expect(state.sessionId).toBeNull();
+      expect(state.comboCount).toBe(0);
+      expect(state.exitCount).toBe(0);
+      expect(state.phase).toBe('SETUP');
     });
   });
 });
