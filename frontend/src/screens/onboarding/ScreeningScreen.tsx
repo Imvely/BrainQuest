@@ -179,7 +179,7 @@ export default function ScreeningScreen() {
   // --- Selection Phase ---
   if (phase === 'selection') {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.selectionContent}>
           <Text style={styles.selectionTitle}>시작하기 전에</Text>
           <Text style={styles.selectionSubtitle}>나에 대해 알려주세요</Text>
@@ -223,7 +223,7 @@ export default function ScreeningScreen() {
   // --- Diagnosis Phase ---
   if (phase === 'diagnosis') {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.quizHeader}>
           <TouchableOpacity onPress={() => setPhase('selection')} style={styles.backBtn}>
             <Text style={styles.backText}>{'<'}</Text>
@@ -265,7 +265,7 @@ export default function ScreeningScreen() {
     const selectedValue = answers[question.id];
 
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.quizHeader}>
           <TouchableOpacity
             onPress={() => {
@@ -354,7 +354,7 @@ export default function ScreeningScreen() {
   const riskConfig = RISK_CONFIG[riskLevel];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView contentContainerStyle={styles.resultContent}>
         <Text style={styles.resultTitle}>스크리닝 결과</Text>
 

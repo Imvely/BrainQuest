@@ -40,12 +40,12 @@ const OUTFIT_STYLES = [
 ];
 
 const COLOR_OPTIONS = [
-  '#6C5CE7',
-  '#00CEC9',
-  '#FD79A8',
-  '#FDCB6E',
-  '#00B894',
-  '#E17055',
+  Colors.PRIMARY,
+  Colors.SECONDARY,
+  Colors.ACCENT,
+  Colors.GOLD,
+  Colors.SUCCESS,
+  Colors.WARNING,
 ];
 
 export default function CharacterCreateScreen() {
@@ -133,7 +133,7 @@ export default function CharacterCreateScreen() {
   ), [selectedOutfit, selectedColor]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>{'<'}</Text>

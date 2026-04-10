@@ -169,7 +169,7 @@ export default function StyleQuizScreen() {
   if (resultClass) {
     const config = CLASS_CONFIG[resultClass];
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.resultContainer}>
           <Text style={styles.resultLabel}>당신의 모험 스타일은</Text>
           <Text style={styles.resultEmoji}>{config.emoji}</Text>
@@ -193,7 +193,7 @@ export default function StyleQuizScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}

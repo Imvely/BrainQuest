@@ -13,12 +13,14 @@ jest.mock('@gorhom/bottom-sheet', () => {
     }));
     return index >= 0 ? <View>{children}</View> : null;
   });
+  const { TextInput } = require('react-native');
   return {
     __esModule: true,
     default: BottomSheet,
     BottomSheetBackdrop: () => null,
     BottomSheetBackdropProps: {},
     BottomSheetView: ({ children }: any) => children,
+    BottomSheetTextInput: TextInput,
   };
 });
 

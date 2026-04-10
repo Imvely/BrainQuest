@@ -24,6 +24,7 @@ export function useEndBattle() {
       queryClient.invalidateQueries({ queryKey: ['battleHistory'] });
       queryClient.invalidateQueries({ queryKey: ['character'] });
       queryClient.invalidateQueries({ queryKey: ['quests'] });
+      queryClient.invalidateQueries({ queryKey: ['timeline'] });
     },
   });
 }

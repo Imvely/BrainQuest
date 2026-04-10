@@ -2,13 +2,12 @@ import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   Platform,
   ScrollView,
 } from 'react-native';
-import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps, BottomSheetView } from '@gorhom/bottom-sheet';
+import BottomSheet, { BottomSheetBackdrop, BottomSheetBackdropProps, BottomSheetView, BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { Colors } from '../../constants/colors';
 import { Fonts, FontSize } from '../../constants/fonts';
 import { BlockCategory, TimeBlockCreateRequest } from '../../types/timeline';
@@ -97,6 +96,9 @@ export default function AddBlockModal({
       index={0}
       snapPoints={snapPoints}
       enablePanDownToClose
+      android_keyboardInputMode="adjustResize"
+      keyboardBehavior="interactive"
+      keyboardBlurBehavior="restore"
       onClose={onClose}
       backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBg}
@@ -107,7 +109,7 @@ export default function AddBlockModal({
 
         {/* Title input */}
         <Text style={styles.label}>제목</Text>
-        <TextInput
+        <BottomSheetTextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
@@ -144,7 +146,7 @@ export default function AddBlockModal({
         {/* Time row */}
         <Text style={styles.label}>시간</Text>
         <View style={styles.timeRow}>
-          <TextInput
+          <BottomSheetTextInput
             style={[styles.input, styles.timeInput]}
             value={startTime}
             onChangeText={setStartTime}
@@ -154,7 +156,7 @@ export default function AddBlockModal({
             maxLength={5}
           />
           <Text style={styles.timeSep}>~</Text>
-          <TextInput
+          <BottomSheetTextInput
             style={[styles.input, styles.timeInput]}
             value={endTime}
             onChangeText={setEndTime}

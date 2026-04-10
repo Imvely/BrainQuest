@@ -27,6 +27,7 @@ import { TimeBlockCreateRequest } from '../../types/timeline';
 import { useTimeline, useCreateTimeBlock, useDeleteTimeBlock } from '../../hooks/useTimeline';
 import { useCharacter } from '../../hooks/useCharacter';
 import { useQuests } from '../../hooks/useQuests';
+import { useTodayEmotions } from '../../hooks/useEmotions';
 import { useEmotionStore } from '../../stores/useEmotionStore';
 import { useTimelineStore } from '../../stores/useTimelineStore';
 import { useAuthStore } from '../../stores/useAuthStore';
@@ -55,6 +56,15 @@ export default function TimelineScreen() {
   const { data: character } = useCharacter();
   const { data: quests } = useQuests({ status: 'ACTIVE' });
   const recentRecords = useEmotionStore((s) => s.recentRecords);
+  const { data: todayEmotions } = useTodayEmotions();
+
+  // Sync today's emotions from server → store on first load
+  useEffect(() => {
+    if (todayEmotions && todayEmotions.length > 0 && recentRecords.length === 0) {
+      useEmotionStore.getState().setRecentRecords(todayEmotions);
+      useEmotionStore.getState().setTodayCount(todayEmotions.length);
+    }
+  }, [todayEmotions, recentRecords.length]);
 
   const createBlock = useCreateTimeBlock();
   const deleteBlock = useDeleteTimeBlock();

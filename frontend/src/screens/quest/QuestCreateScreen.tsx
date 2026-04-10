@@ -29,7 +29,17 @@ import { QuestCategory, QuestGenerateResponse } from '../../types/quest';
 import { QuestStackParamList } from '../../navigation/MainTab';
 import { useGenerateQuest } from '../../hooks/useQuests';
 import { createQuest } from '../../api/quest';
+import { createTimeBlock } from '../../api/map';
+import type { BlockCategory } from '../../types/timeline';
 import Card from '../../components/common/Card';
+
+const QUEST_TO_BLOCK_CATEGORY: Record<QuestCategory, BlockCategory> = {
+  WORK: 'WORK',
+  HOME: 'HOME',
+  HEALTH: 'HEALTH',
+  SOCIAL: 'SOCIAL',
+  SELF: 'CUSTOM',
+};
 import Button from '../../components/common/Button';
 import GradeIcon from '../../components/quest/GradeIcon';
 
@@ -115,11 +125,36 @@ export default function QuestCreateScreen() {
     if (!result) return;
     setSaving(true);
     try {
-      await createQuest({
+      const questRes = await createQuest({
         ...result,
         originalTitle: title.trim(),
         category,
       });
+
+      // Create time block if user opted in
+      if (addToTimeline && questRes.data) {
+        const today = new Date().toISOString().slice(0, 10);
+        const now = new Date();
+        const startH = String(now.getHours()).padStart(2, '0');
+        const startM = String(now.getMinutes()).padStart(2, '0');
+        const endDate = new Date(now.getTime() + result.estimatedMin * 60000);
+        const endH = String(endDate.getHours()).padStart(2, '0');
+        const endM = String(endDate.getMinutes()).padStart(2, '0');
+
+        try {
+          await createTimeBlock({
+            blockDate: today,
+            startTime: `${startH}:${startM}`,
+            endTime: `${endH}:${endM}`,
+            category: QUEST_TO_BLOCK_CATEGORY[category],
+            title: result.questTitle,
+            questId: questRes.data.id,
+          });
+        } catch {
+          // Time block creation failure is non-fatal
+        }
+      }
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       navigation.goBack();
     } catch {
@@ -127,7 +162,7 @@ export default function QuestCreateScreen() {
     } finally {
       setSaving(false);
     }
-  }, [result, title, category, navigation]);
+  }, [result, title, category, addToTimeline, navigation]);
 
   const handleRetry = useCallback(() => {
     setResult(null);

@@ -1,6 +1,16 @@
 import React from 'react';
 import { render, fireEvent, act, waitFor } from '@testing-library/react-native';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import CheckinScreen from '../CheckinScreen';
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -146,7 +156,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows morning header and greeting', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText(/아침 체크인/)).toBeTruthy();
         expect(getByText(/좋은 아침/)).toBeTruthy();
@@ -154,7 +164,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows sleep hours selector with default 7시간', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText('7시간')).toBeTruthy();
         expect(getByText('어젯밤 수면 시간')).toBeTruthy();
@@ -162,7 +172,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows sleep quality options (나쁨/보통/좋음)', async () => {
-      const { getAllByText } = render(<CheckinScreen />);
+      const { getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         // "나쁨" and "좋음" may appear in both sleep quality and condition rows
         expect(getAllByText('나쁨').length).toBeGreaterThanOrEqual(1);
@@ -171,7 +181,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows condition selector', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText('지금 컨디션은?')).toBeTruthy();
         expect(getByText('최악')).toBeTruthy();
@@ -180,21 +190,21 @@ describe('CheckinScreen', () => {
     });
 
     it('increments sleep hours with +0.5 button', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('7시간')).toBeTruthy());
       fireEvent.press(getByText('+0.5'));
       expect(getByText('7.5시간')).toBeTruthy();
     });
 
     it('decrements sleep hours with -0.5 button', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('7시간')).toBeTruthy());
       fireEvent.press(getByText('-0.5'));
       expect(getByText('6.5시간')).toBeTruthy();
     });
 
     it('clamps sleep hours at min 4 / max 10', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('7시간')).toBeTruthy());
 
       for (let i = 0; i < 20; i++) fireEvent.press(getByText('-0.5'));
@@ -215,7 +225,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows evening header and greeting', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText(/저녁 체크인/)).toBeTruthy();
         expect(getByText(/오늘 하루 수고했어요/)).toBeTruthy();
@@ -223,7 +233,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows focus/impulsivity/emotion questions', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText('오늘 집중력은 어땠나요?')).toBeTruthy();
         expect(getByText('오늘 충동성/산만함은?')).toBeTruthy();
@@ -232,7 +242,7 @@ describe('CheckinScreen', () => {
     });
 
     it('shows memo toggle (collapsed by default)', async () => {
-      const { getByText, queryByPlaceholderText } = render(<CheckinScreen />);
+      const { getByText, queryByPlaceholderText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText('+ 메모 추가')).toBeTruthy();
       });
@@ -240,7 +250,7 @@ describe('CheckinScreen', () => {
     });
 
     it('expands memo on tap', async () => {
-      const { getByText, getByPlaceholderText } = render(<CheckinScreen />);
+      const { getByText, getByPlaceholderText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('+ 메모 추가')).toBeTruthy());
       fireEvent.press(getByText('+ 메모 추가'));
       expect(getByPlaceholderText('오늘 특별한 일이 있었나요?')).toBeTruthy();
@@ -257,14 +267,14 @@ describe('CheckinScreen', () => {
     });
 
     it('does not call API when no fields selected', async () => {
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('체크인 완료!')).toBeTruthy());
       fireEvent.press(getByText('체크인 완료!'));
       expect(mockSubmitCheckin).not.toHaveBeenCalled();
     });
 
     it('does not call API with only sleep quality selected', async () => {
-      const { getAllByText, getByText } = render(<CheckinScreen />);
+      const { getAllByText, getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getAllByText('좋음').length).toBeGreaterThanOrEqual(1));
       fireEvent.press(getAllByText('좋음')[0]); // sleep quality only
       fireEvent.press(getByText('체크인 완료!'));
@@ -279,7 +289,7 @@ describe('CheckinScreen', () => {
     });
 
     it('does not call API with only one evening field', async () => {
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('오늘 집중력은 어땠나요?')).toBeTruthy());
       const goodBtns = getAllByText('좋음');
       fireEvent.press(goodBtns[0]); // only focus
@@ -303,7 +313,7 @@ describe('CheckinScreen', () => {
 
     it('calls submitCheckin with correct morning payload', async () => {
       mockSubmitCheckin.mockResolvedValueOnce(CHECKIN_SUCCESS);
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getAllByText('좋음').length).toBeGreaterThanOrEqual(1));
 
       // Select sleep quality = 좋음(3), condition = 최고(5)
@@ -326,7 +336,7 @@ describe('CheckinScreen', () => {
 
     it('shows completion screen with streak count and rewards', async () => {
       mockSubmitCheckin.mockResolvedValueOnce(CHECKIN_SUCCESS);
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getAllByText('좋음').length).toBeGreaterThanOrEqual(1));
 
       fireEvent.press(getAllByText('좋음')[0]);
@@ -348,7 +358,7 @@ describe('CheckinScreen', () => {
 
     it('"홈으로" button calls goBack', async () => {
       mockSubmitCheckin.mockResolvedValueOnce(CHECKIN_SUCCESS);
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getAllByText('좋음').length).toBeGreaterThanOrEqual(1));
 
       fireEvent.press(getAllByText('좋음')[0]);
@@ -375,7 +385,7 @@ describe('CheckinScreen', () => {
 
     it('calls submitCheckin with correct evening payload', async () => {
       mockSubmitCheckin.mockResolvedValueOnce(CHECKIN_SUCCESS);
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('오늘 집중력은 어땠나요?')).toBeTruthy());
 
       // Select 보통(3) for all three
@@ -409,7 +419,7 @@ describe('CheckinScreen', () => {
         todayRecords: [{ id: 1, checkinType: 'MORNING', checkinDate: '2026-04-09' }],
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(getByText(/이미 했어요/)).toBeTruthy();
@@ -422,7 +432,7 @@ describe('CheckinScreen', () => {
         todayRecords: [{ id: 2, checkinType: 'EVENING', checkinDate: '2026-04-09' }],
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(getByText(/이미 했어요/)).toBeTruthy();
@@ -435,7 +445,7 @@ describe('CheckinScreen', () => {
         todayRecords: [{ id: 1, checkinType: 'MORNING', checkinDate: '2026-04-09' }],
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('돌아가기')).toBeTruthy());
       fireEvent.press(getByText('돌아가기'));
       expect(mockGoBack).toHaveBeenCalled();
@@ -453,7 +463,7 @@ describe('CheckinScreen', () => {
         yesterdayRecords: [], // no evening yesterday
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(getByText(/어제 저녁 기록도 같이 할까요/)).toBeTruthy();
@@ -467,7 +477,7 @@ describe('CheckinScreen', () => {
         yesterdayRecords: [],
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText(/어제 저녁 기록도/)).toBeTruthy());
 
       fireEvent.press(getByText(/어제 저녁 기록도/));
@@ -492,7 +502,7 @@ describe('CheckinScreen', () => {
         meds: [{ id: 10, medName: '콘서타', dosage: '27mg', scheduleTime: '08:00', isActive: true }],
       });
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(getByText('오늘 약 드셨나요?')).toBeTruthy();
         expect(getByText('콘서타 27mg')).toBeTruthy();
@@ -501,7 +511,7 @@ describe('CheckinScreen', () => {
 
     it('hides medication section when no meds registered', async () => {
       setupInitMocks({ meds: [] });
-      const { queryByText } = render(<CheckinScreen />);
+      const { queryByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => {
         expect(queryByText('오늘 약 드셨나요?')).toBeNull();
       });
@@ -514,7 +524,7 @@ describe('CheckinScreen', () => {
       mockSubmitCheckin.mockResolvedValueOnce(CHECKIN_SUCCESS);
       mockCreateMedLog.mockResolvedValueOnce({ data: { id: 100 } });
 
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('콘서타 27mg')).toBeTruthy());
 
       // Check medication
@@ -549,7 +559,7 @@ describe('CheckinScreen', () => {
         data: { id: 1, streakCount: 7, reward: { exp: 10, gold: 10 } },
       });
 
-      const { getByText, getAllByText } = render(<CheckinScreen />);
+      const { getByText, getAllByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getAllByText('좋음').length).toBeGreaterThanOrEqual(1));
 
       fireEvent.press(getAllByText('좋음')[0]);
@@ -576,7 +586,7 @@ describe('CheckinScreen', () => {
       mockGetStreaks.mockReturnValue(new Promise(() => {}));
       mockGetMedications.mockReturnValue(new Promise(() => {}));
 
-      const { toJSON } = render(<CheckinScreen />);
+      const { toJSON } = render(<CheckinScreen />, { wrapper: createWrapper() });
       // Should render without crashing (loading state)
       expect(toJSON()).toBeTruthy();
     });
@@ -592,7 +602,7 @@ describe('CheckinScreen', () => {
       mockGetStreaks.mockRejectedValue(new Error('Network Error'));
       mockGetMedications.mockRejectedValue(new Error('Network Error'));
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
 
       await waitFor(() => {
         expect(getByText(/좋은 아침/)).toBeTruthy();
@@ -608,7 +618,7 @@ describe('CheckinScreen', () => {
       jest.spyOn(Date.prototype, 'getHours').mockReturnValue(9);
       setupInitMocks();
 
-      const { getByText } = render(<CheckinScreen />);
+      const { getByText } = render(<CheckinScreen />, { wrapper: createWrapper() });
       await waitFor(() => expect(getByText('<')).toBeTruthy());
       fireEvent.press(getByText('<'));
       expect(mockGoBack).toHaveBeenCalled();

@@ -27,6 +27,7 @@ import * as Haptics from 'expo-haptics';
 import LottieView from 'lottie-react-native';
 import { format, subDays } from 'date-fns';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { Colors } from '../../constants/colors';
 import { Fonts, FontSize } from '../../constants/fonts';
 import { STREAK_BONUS } from '../../constants/game';
@@ -40,6 +41,7 @@ import {
 import { getTimeline } from '../../api/map';
 import type { CheckinResponse, CheckinRecord, Medication, DailySummary } from '../../api/gate';
 import { useGateStore } from '../../stores/useGateStore';
+import type { TimeBlock } from '../../types/timeline';
 import Toast from '../../components/common/Toast';
 
 // ---------------------------------------------------------------------------
@@ -141,7 +143,8 @@ function EmojiRow({ label, options, selected, onSelect }: EmojiRowProps) {
 // ---------------------------------------------------------------------------
 
 export default function CheckinScreen() {
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<{ goBack: () => void }>();
+  const queryClient = useQueryClient();
   const checkinType = useMemo(getCheckinType, []);
   const today = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
   const yesterday = useMemo(() => format(subDays(new Date(), 1), 'yyyy-MM-dd'), []);
@@ -283,6 +286,9 @@ export default function CheckinScreen() {
       setCompleted(true);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
+      // Refresh character data so EXP bar updates on timeline
+      queryClient.invalidateQueries({ queryKey: ['character'] });
+
       // Confetti
       confettiScale.value = withSequence(
         withSpring(1.2, { damping: 4 }),
@@ -306,16 +312,16 @@ export default function CheckinScreen() {
       if (activeType === 'EVENING' && !fillMissedEvening) {
         try {
           const timelineRes = await getTimeline(today);
-          const blocks = timelineRes.data ?? [];
-          const battleBlocks = blocks.filter((b: any) => b.category === 'BATTLE' || b.questId);
+          const blocks: TimeBlock[] = timelineRes.data ?? [];
+          const battleBlocks = blocks.filter((b) => b.questId);
           setSummary({
             battleCount: battleBlocks.length,
-            battleWins: battleBlocks.filter((b: any) => b.status === 'COMPLETED').length,
-            questCompleted: blocks.filter((b: any) => b.status === 'COMPLETED').length,
+            battleWins: battleBlocks.filter((b) => b.status === 'COMPLETED').length,
+            questCompleted: blocks.filter((b) => b.status === 'COMPLETED').length,
             questTotal: blocks.length,
             dominantWeather: null,
             achievementRate: blocks.length > 0
-              ? Math.round((blocks.filter((b: any) => b.status === 'COMPLETED').length / blocks.length) * 100)
+              ? Math.round((blocks.filter((b) => b.status === 'COMPLETED').length / blocks.length) * 100)
               : 0,
           });
           setShowSummary(true);
@@ -338,7 +344,7 @@ export default function CheckinScreen() {
   }, [
     isValid, activeType, fillMissedEvening, yesterday, today,
     sleepHours, sleepQuality, condition, focusScore, impulsivityScore, emotionScore, memo,
-    medTaken, navigation, confettiScale, confettiOpacity,
+    medTaken, navigation, queryClient, confettiScale, confettiOpacity,
   ]);
 
   // --- Loading ---

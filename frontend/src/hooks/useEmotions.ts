@@ -32,6 +32,17 @@ export function useEmotionsByDate(date: string | null) {
   });
 }
 
+export function useTodayEmotions() {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return useQuery({
+    queryKey: ['emotionsByDate', today],
+    queryFn: () => skyApi.getEmotionsByDate(today),
+    select: (res) => res.data,
+    staleTime: STALE_TIME.NORMAL,
+  });
+}
+
 export function useCreateEmotion() {
   const queryClient = useQueryClient();
 

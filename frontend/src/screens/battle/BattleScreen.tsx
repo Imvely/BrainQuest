@@ -76,8 +76,30 @@ export default function BattleScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
 
-  // ── Stores ──
-  const store = useBattleStore();
+  // ── Stores (individual selectors to avoid full-store re-renders) ──
+  const phase = useBattleStore((s) => s.phase);
+  const remainingSeconds = useBattleStore((s) => s.remainingSeconds);
+  const comboCount = useBattleStore((s) => s.comboCount);
+  const maxCombo = useBattleStore((s) => s.maxCombo);
+  const exitCount = useBattleStore((s) => s.exitCount);
+  const sessionId = useBattleStore((s) => s.sessionId);
+  const monsterMaxHp = useBattleStore((s) => s.monsterMaxHp);
+  const monsterRemainingHp = useBattleStore((s) => s.monsterRemainingHp);
+  const characterHp = useBattleStore((s) => s.characterHp);
+  const characterMaxHp = useBattleStore((s) => s.characterMaxHp);
+  const plannedMin = useBattleStore((s) => s.plannedMin);
+  const result = useBattleStore((s) => s.result);
+  const expEarned = useBattleStore((s) => s.expEarned);
+  const goldEarned = useBattleStore((s) => s.goldEarned);
+  const itemDrops = useBattleStore((s) => s.itemDrops);
+  const levelUp = useBattleStore((s) => s.levelUp);
+  const newLevel = useBattleStore((s) => s.newLevel);
+  const isPerfectFocus = useBattleStore((s) => s.isPerfectFocus);
+
+  // Store actions (stable references — don't cause re-renders)
+  const storeActions = useRef(useBattleStore.getState());
+  storeActions.current = useBattleStore.getState();
+
   const character = useCharacterStore((s) => s.character);
   const nextBlock = useTimelineStore((s) => s.nextBlock);
 
@@ -116,14 +138,6 @@ export default function BattleScreen() {
   const dmgOpacity = useSharedValue(0);
   const victoryScale = useSharedValue(0);
 
-  // ── Derived values ──
-  const {
-    phase, remainingSeconds, comboCount, maxCombo, exitCount,
-    sessionId, monsterMaxHp, monsterRemainingHp, characterHp,
-    characterMaxHp, plannedMin, result, expEarned, goldEarned,
-    itemDrops, levelUp, newLevel, isPerfectFocus,
-  } = store;
-
   const grade = useMemo<QuestGrade>(() => getGradeFromMinutes(selectedMin), [selectedMin]);
   const monster = useMemo(() => MONSTER_CONFIG[grade], [grade]);
   const gradeConf = useMemo(() => GRADE_CONFIG[grade], [grade]);
@@ -157,6 +171,52 @@ export default function BattleScreen() {
     [plannedMin],
   );
   const fightMonster = useMemo(() => MONSTER_CONFIG[fightGrade], [fightGrade]);
+
+  // =====================================================================
+  // Handlers (defined before effects that use them)
+  // =====================================================================
+
+  const handleBattleEnd = useCallback(
+    (battleResult: BattleResult) => {
+      if (!sessionId || isEndingRef.current) return;
+      isEndingRef.current = true;
+
+      endMut.mutate(
+        { sessionId, request: { result: battleResult, maxCombo } },
+        {
+          onSuccess: (res) => {
+            const d = res.data;
+            storeActions.current.setResult({
+              result: battleResult,
+              expEarned: d?.expEarned ?? 0,
+              goldEarned: d?.goldEarned ?? 0,
+              itemDrops: d?.itemDrops ?? [],
+              levelUp: d?.levelUp ?? false,
+              newLevel: d?.newLevel,
+              checkpointCompleted: d?.checkpointCompleted ?? false,
+            });
+            if (battleResult === 'VICTORY') {
+              victoryScale.value = withSpring(1, { damping: 6 });
+              Haptics.notificationAsync(
+                Haptics.NotificationFeedbackType.Success,
+              );
+            }
+          },
+          onError: () => {
+            storeActions.current.setResult({
+              result: battleResult,
+              expEarned: 0,
+              goldEarned: 0,
+              itemDrops: [],
+              levelUp: false,
+              checkpointCompleted: false,
+            });
+          },
+        },
+      );
+    },
+    [sessionId, maxCombo, endMut, victoryScale],
+  );
 
   // =====================================================================
   // Effects
@@ -209,7 +269,7 @@ export default function BattleScreen() {
     const multiplier = COMBO_DAMAGE_MULTIPLIER[combo] ?? 1;
     const damage = Math.floor(20 * (1 + atk / 100) * multiplier);
 
-    store.applyDamage(damage);
+    storeActions.current.applyDamage(damage);
     setLastDamage(damage);
     setShowDamage(true);
 
@@ -240,7 +300,7 @@ export default function BattleScreen() {
     );
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  }, [character, comboCount, store, charSlash, monsterShake, dmgY, dmgOpacity]);
+  }, [character, comboCount, charSlash, monsterShake, dmgY, dmgOpacity]);
 
   // =====================================================================
   // Timer hook
@@ -252,7 +312,7 @@ export default function BattleScreen() {
     onAppReturn: (durationSec) => {
       if (durationSec < 5 || !sessionId) return;
 
-      store.handleExit();
+      storeActions.current.handleExit();
 
       exitMut.mutate(sessionId, {
         onSettled: () => {
@@ -266,7 +326,7 @@ export default function BattleScreen() {
                 return;
               }
 
-              store.handleReturn(penalty, hp);
+              storeActions.current.handleReturn(penalty, hp);
               resetComboTracker();
               setPenaltyType(penalty);
               setShowPenalty(true);
@@ -282,59 +342,13 @@ export default function BattleScreen() {
     },
   });
 
-  // =====================================================================
-  // Handlers
-  // =====================================================================
-
-  const handleBattleEnd = useCallback(
-    (battleResult: BattleResult) => {
-      if (!sessionId || isEndingRef.current) return;
-      isEndingRef.current = true;
-
-      endMut.mutate(
-        { sessionId, request: { result: battleResult, maxCombo } },
-        {
-          onSuccess: (res) => {
-            const d = res.data;
-            store.setResult({
-              result: battleResult,
-              expEarned: d?.expEarned ?? 0,
-              goldEarned: d?.goldEarned ?? 0,
-              itemDrops: d?.itemDrops ?? [],
-              levelUp: d?.levelUp ?? false,
-              newLevel: d?.newLevel,
-              checkpointCompleted: d?.checkpointCompleted ?? false,
-            });
-            if (battleResult === 'VICTORY') {
-              victoryScale.value = withSpring(1, { damping: 6 });
-              Haptics.notificationAsync(
-                Haptics.NotificationFeedbackType.Success,
-              );
-            }
-          },
-          onError: () => {
-            store.setResult({
-              result: battleResult,
-              expEarned: 0,
-              goldEarned: 0,
-              itemDrops: [],
-              levelUp: false,
-              checkpointCompleted: false,
-            });
-          },
-        },
-      );
-    },
-    [sessionId, maxCombo, store, endMut, victoryScale],
-  );
-
   const handleStartBattle = useCallback(() => {
     // Clear any existing countdown to prevent double-start leak
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
 
-    store.setPlannedMin(selectedMin);
-    store.setPhase('COUNTDOWN');
+    storeActions.current.setPlannedMin(selectedMin);
+    storeActions.current.setPhase('COUNTDOWN');
     isEndingRef.current = false;
 
     let count = 3;
@@ -381,7 +395,7 @@ export default function BattleScreen() {
             {
               onSuccess: (res) => {
                 if (res.data) {
-                  store.startFighting(res.data);
+                  storeActions.current.startFighting(res.data);
                   const hp = character?.statHp ?? 100;
                   useBattleStore.setState({
                     characterHp: hp,
@@ -392,7 +406,7 @@ export default function BattleScreen() {
               },
               onError: () => {
                 Alert.alert('오류', '전투를 시작할 수 없습니다.');
-                store.setPhase('SETUP');
+                storeActions.current.setPhase('SETUP');
               },
             },
           );
@@ -400,7 +414,7 @@ export default function BattleScreen() {
       }
     }, 1000);
   }, [
-    selectedMin, routeQuestId, routeCheckpointId, store, character,
+    selectedMin, routeQuestId, routeCheckpointId, character,
     startMut, cdScale, cdOpacity, flashOpacity, resetComboTracker,
   ]);
 
@@ -420,14 +434,14 @@ export default function BattleScreen() {
   }, [handleBattleEnd]);
 
   const handleGoHome = useCallback(() => {
-    store.reset();
+    storeActions.current.reset();
     navigation.getParent()?.navigate('Map');
-  }, [store, navigation]);
+  }, [navigation]);
 
   const handleNextBattle = useCallback(() => {
-    store.reset();
+    storeActions.current.reset();
     isEndingRef.current = false;
-  }, [store]);
+  }, []);
 
   // Android hardware back button — block during COUNTDOWN/FIGHTING
   useEffect(() => {
