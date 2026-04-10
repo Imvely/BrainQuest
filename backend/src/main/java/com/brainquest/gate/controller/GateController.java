@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.util.List;
+// (MedicationUpdateRequest / MedLogUpdateRequest는 gate.dto.* 와일드카드로 임포트됨)
 
 /**
  * GATE 모듈 컨트롤러.
@@ -77,6 +78,39 @@ public class GateController {
     }
 
     /**
+     * 사용자의 전체 약물 목록 조회 (비활성 포함).
+     */
+    @GetMapping("/medications")
+    public ResponseEntity<ApiResponse<List<MedicationResponse>>> getMedications(
+            @AuthenticationPrincipal Long userId) {
+        List<MedicationResponse> medications = medicationService.getAllMedications(userId);
+        return ResponseEntity.ok(ApiResponse.of(medications));
+    }
+
+    /**
+     * 약물 정보 부분 수정.
+     */
+    @PutMapping("/medications/{id}")
+    public ResponseEntity<ApiResponse<MedicationResponse>> updateMedication(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody MedicationUpdateRequest request) {
+        MedicationResponse response = medicationService.updateMedication(userId, id, request);
+        return ResponseEntity.ok(ApiResponse.of(response, "약물 정보 수정 완료"));
+    }
+
+    /**
+     * 약물 삭제 (복용 기록은 유지).
+     */
+    @DeleteMapping("/medications/{id}")
+    public ResponseEntity<ApiResponse<Void>> deleteMedication(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id) {
+        medicationService.deleteMedication(userId, id);
+        return ResponseEntity.ok(ApiResponse.ok("약물 삭제 완료"));
+    }
+
+    /**
      * 약물 복용 기록.
      */
     @PostMapping("/med-logs")
@@ -85,6 +119,18 @@ public class GateController {
             @Valid @RequestBody MedLogRequest request) {
         MedLogResponse response = medicationService.logMedication(userId, request);
         return ResponseEntity.ok(ApiResponse.of(response, "복용 기록 완료"));
+    }
+
+    /**
+     * 복용 기록의 약효/부작용 정보 수정.
+     */
+    @PutMapping("/med-logs/{id}")
+    public ResponseEntity<ApiResponse<MedLogResponse>> updateMedLog(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id,
+            @Valid @RequestBody MedLogUpdateRequest request) {
+        MedLogResponse response = medicationService.updateMedLog(userId, id, request);
+        return ResponseEntity.ok(ApiResponse.of(response, "복용 기록 수정 완료"));
     }
 
     /**

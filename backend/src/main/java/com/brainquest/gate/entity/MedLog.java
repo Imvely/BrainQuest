@@ -61,4 +61,16 @@ public class MedLog {
         this.effectiveness = effectiveness;
         this.sideEffects = sideEffects;
     }
+
+    /**
+     * 약효/부작용 정보를 부분 업데이트한다. null이 아닌 필드만 반영.
+     */
+    public void updateEvaluation(Integer effectiveness, List<String> sideEffects) {
+        if (effectiveness != null) {
+            this.effectiveness = effectiveness;
+        }
+        if (sideEffects != null) {
+            this.sideEffects = sideEffects;
+        }
+    }
 }

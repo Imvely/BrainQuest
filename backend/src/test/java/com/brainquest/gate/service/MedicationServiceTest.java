@@ -5,8 +5,10 @@ import com.brainquest.common.exception.UnauthorizedException;
 import com.brainquest.event.events.MedLogCompletedEvent;
 import com.brainquest.gate.dto.MedLogRequest;
 import com.brainquest.gate.dto.MedLogResponse;
+import com.brainquest.gate.dto.MedLogUpdateRequest;
 import com.brainquest.gate.dto.MedicationRequest;
 import com.brainquest.gate.dto.MedicationResponse;
+import com.brainquest.gate.dto.MedicationUpdateRequest;
 import com.brainquest.gate.entity.MedLog;
 import com.brainquest.gate.entity.Medication;
 import com.brainquest.gate.repository.MedLogRepository;
@@ -230,6 +232,169 @@ class MedicationServiceTest {
                     .hasMessageContaining("권한이 없습니다.");
 
             verify(medLogRepository, never()).save(any());
+        }
+    }
+
+    // --- getAllMedications ---
+
+    @Nested
+    @DisplayName("getAllMedications")
+    class GetAllMedications {
+
+        @Test
+        @DisplayName("비활성 포함 전체 목록 반환 (scheduleTime 오름차순)")
+        void returnsAll() {
+            Long userId = 1L;
+            Medication m1 = Medication.builder()
+                    .userId(userId).medName("콘서타").dosage("27mg")
+                    .scheduleTime(LocalTime.of(8, 0)).build();
+            Medication m2 = Medication.builder()
+                    .userId(userId).medName("메디키넷").dosage("10mg")
+                    .scheduleTime(LocalTime.of(12, 0)).build();
+
+            given(medicationRepository.findAllByUserIdOrderByScheduleTime(userId))
+                    .willReturn(List.of(m1, m2));
+
+            List<MedicationResponse> result = medicationService.getAllMedications(userId);
+
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).medName()).isEqualTo("콘서타");
+            assertThat(result.get(1).medName()).isEqualTo("메디키넷");
+        }
+    }
+
+    // --- updateMedication ---
+
+    @Nested
+    @DisplayName("updateMedication")
+    class UpdateMedication {
+
+        @Test
+        @DisplayName("정상 — 용량과 active만 부분 수정")
+        void partialUpdate() {
+            Long userId = 1L;
+            Medication existing = Medication.builder()
+                    .userId(userId).medName("콘서타").dosage("27mg")
+                    .scheduleTime(LocalTime.of(8, 0)).build();
+
+            given(medicationRepository.findByIdAndUserId(10L, userId))
+                    .willReturn(Optional.of(existing));
+
+            MedicationUpdateRequest request =
+                    new MedicationUpdateRequest(null, "36mg", null, false);
+
+            MedicationResponse response =
+                    medicationService.updateMedication(userId, 10L, request);
+
+            // dirty checking으로 인해 existing 엔티티가 직접 변경됨
+            assertThat(response.dosage()).isEqualTo("36mg");
+            assertThat(response.active()).isFalse();
+            assertThat(response.medName()).isEqualTo("콘서타"); // 미변경
+            assertThat(response.scheduleTime()).isEqualTo(LocalTime.of(8, 0)); // 미변경
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 약물 — EntityNotFoundException")
+        void notFound() {
+            given(medicationRepository.findByIdAndUserId(999L, 1L))
+                    .willReturn(Optional.empty());
+
+            MedicationUpdateRequest request =
+                    new MedicationUpdateRequest(null, "36mg", null, null);
+
+            assertThatThrownBy(() -> medicationService.updateMedication(1L, 999L, request))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("약물 정보를 찾을 수 없습니다.");
+        }
+
+        @Test
+        @DisplayName("타 사용자의 약물 — 조회 실패 (findByIdAndUserId에서 걸러짐)")
+        void otherUser() {
+            // findByIdAndUserId는 userId 불일치 시 Optional.empty 반환 → EntityNotFoundException
+            given(medicationRepository.findByIdAndUserId(10L, 1L))
+                    .willReturn(Optional.empty());
+
+            MedicationUpdateRequest request =
+                    new MedicationUpdateRequest("new", null, null, null);
+
+            assertThatThrownBy(() -> medicationService.updateMedication(1L, 10L, request))
+                    .isInstanceOf(EntityNotFoundException.class);
+        }
+    }
+
+    // --- deleteMedication ---
+
+    @Nested
+    @DisplayName("deleteMedication")
+    class DeleteMedication {
+
+        @Test
+        @DisplayName("정상 — 약물 삭제")
+        void success() {
+            Long userId = 1L;
+            Medication existing = Medication.builder()
+                    .userId(userId).medName("콘서타").dosage("27mg")
+                    .scheduleTime(LocalTime.of(8, 0)).build();
+
+            given(medicationRepository.findByIdAndUserId(10L, userId))
+                    .willReturn(Optional.of(existing));
+
+            medicationService.deleteMedication(userId, 10L);
+
+            verify(medicationRepository).delete(existing);
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 약물 — EntityNotFoundException")
+        void notFound() {
+            given(medicationRepository.findByIdAndUserId(999L, 1L))
+                    .willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> medicationService.deleteMedication(1L, 999L))
+                    .isInstanceOf(EntityNotFoundException.class);
+
+            verify(medicationRepository, never()).delete(any());
+        }
+    }
+
+    // --- updateMedLog ---
+
+    @Nested
+    @DisplayName("updateMedLog")
+    class UpdateMedLog {
+
+        @Test
+        @DisplayName("정상 — 약효/부작용 부분 업데이트")
+        void success() {
+            Long userId = 1L;
+            MedLog existing = MedLog.builder()
+                    .medicationId(10L).userId(userId)
+                    .logDate(java.time.LocalDate.now())
+                    .takenAt(java.time.LocalDateTime.now())
+                    .build();
+
+            given(medLogRepository.findByIdAndUserId(100L, userId))
+                    .willReturn(Optional.of(existing));
+
+            MedLogUpdateRequest request = new MedLogUpdateRequest(3, List.of("두통"));
+
+            MedLogResponse response =
+                    medicationService.updateMedLog(userId, 100L, request);
+
+            assertThat(response.effectiveness()).isEqualTo(3);
+            assertThat(response.sideEffects()).containsExactly("두통");
+        }
+
+        @Test
+        @DisplayName("존재하지 않는 복용 기록 — EntityNotFoundException")
+        void notFound() {
+            given(medLogRepository.findByIdAndUserId(999L, 1L))
+                    .willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> medicationService.updateMedLog(
+                    1L, 999L, new MedLogUpdateRequest(3, null)))
+                    .isInstanceOf(EntityNotFoundException.class)
+                    .hasMessageContaining("복용 기록을 찾을 수 없습니다.");
         }
     }
 }

@@ -52,4 +52,22 @@ public class Medication {
         this.scheduleTime = scheduleTime;
         this.active = true;
     }
+
+    /**
+     * 약물 정보를 부분 업데이트한다. null이 아닌 필드만 반영.
+     */
+    public void update(String medName, String dosage, LocalTime scheduleTime, Boolean active) {
+        if (medName != null) {
+            this.medName = medName;
+        }
+        if (dosage != null) {
+            this.dosage = dosage;
+        }
+        if (scheduleTime != null) {
+            this.scheduleTime = scheduleTime;
+        }
+        if (active != null) {
+            this.active = active;
+        }
+    }
 }
