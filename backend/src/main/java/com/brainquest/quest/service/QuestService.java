@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -154,8 +155,10 @@ public class QuestService {
     /**
      * 체크포인트를 완료 처리한다.
      * <p>모든 체크포인트 완료 시 퀘스트도 완료 처리된다.</p>
+     * <p><b>REQUIRES_NEW:</b> {@code BattleCompletedEvent}의 {@code @TransactionalEventListener(AFTER_COMMIT)}
+     * 리스너에서 호출되는 경우, 원 트랜잭션은 이미 커밋된 상태이므로 항상 새 트랜잭션에서 실행한다.</p>
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public CheckpointCompleteResponse completeCheckpoint(Long userId, Long questId, Long checkpointId) {
         Quest quest = findQuestById(questId);
         if (!quest.getUserId().equals(userId)) {

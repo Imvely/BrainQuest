@@ -2,6 +2,7 @@ package com.brainquest.character.entity;
 
 import jakarta.persistence.*;
 import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -42,4 +43,15 @@ public class Item {
 
     @Column(name = "image_url", length = 500)
     private String imageUrl;
+
+    @Builder
+    public Item(String name, String description, ItemSlot slot,
+                ItemRarity rarity, Map<String, Integer> statBonus, String imageUrl) {
+        this.name = name;
+        this.description = description;
+        this.slot = slot;
+        this.rarity = rarity;
+        this.statBonus = statBonus;
+        this.imageUrl = imageUrl;
+    }
 }

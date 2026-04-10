@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
@@ -81,8 +82,10 @@ public class CharacterService {
 
     /**
      * 경험치를 부여하고, 스탯 분배 및 레벨업을 처리한다.
+     * <p><b>REQUIRES_NEW:</b> 이벤트 리스너의 AFTER_COMMIT 콜백에서 호출될 수 있으므로
+     * 항상 새 트랜잭션에서 실행하여 원 트랜잭션 커밋 후에도 확실히 DB에 반영되도록 한다.</p>
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void addExp(Long userId, int amount, StatType statType) {
         if (amount <= 0) {
             return;
@@ -129,8 +132,10 @@ public class CharacterService {
 
     /**
      * 골드를 추가한다.
+     * <p><b>REQUIRES_NEW:</b> 이벤트 리스너의 AFTER_COMMIT 콜백에서 호출될 수 있으므로
+     * 항상 새 트랜잭션에서 실행한다.</p>
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void addGold(Long userId, int amount) {
         if (amount <= 0) {
             return;
@@ -182,10 +187,12 @@ public class CharacterService {
 
     /**
      * 퀘스트/전투 등급에 따라 아이템 드롭을 시도한다.
+     * <p><b>REQUIRES_NEW:</b> 이벤트 리스너의 AFTER_COMMIT 콜백에서 호출될 수 있으므로
+     * 항상 새 트랜잭션에서 실행한다.</p>
      *
      * @return 드롭된 UserItemResponse, 드롭 없으면 null
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public UserItemResponse dropItem(Long userId, String grade) {
         Integer chance = DROP_CHANCE.get(grade.toUpperCase());
         if (chance == null) {
