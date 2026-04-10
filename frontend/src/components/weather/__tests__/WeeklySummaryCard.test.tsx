@@ -3,13 +3,14 @@ import { render, fireEvent } from '@testing-library/react-native';
 import WeeklySummaryCard from '../WeeklySummaryCard';
 import { WeeklySummary } from '../../../types/emotion';
 
+// 백엔드 WeeklySummaryResponse: { weekStart, weekEnd, distribution, comparedToLastWeek, totalRecords, avgWeatherValue }
+// (dominantWeather, topTags, weatherDistribution 필드는 존재하지 않음)
 const mockSummary: WeeklySummary = {
   weekStart: '2026-04-06',
   weekEnd: '2026-04-12',
-  dominantWeather: 'SUNNY',
-  avgIntensity: 3.5,
   totalRecords: 7,
-  weatherDistribution: {
+  avgWeatherValue: 5.2,
+  distribution: {
     SUNNY: 3, PARTLY_CLOUDY: 0, CLOUDY: 2, FOG: 0,
     RAIN: 1, THUNDER: 1, STORM: 0,
   },
@@ -17,7 +18,6 @@ const mockSummary: WeeklySummary = {
     SUNNY: 1, PARTLY_CLOUDY: 0, CLOUDY: -1, FOG: 0,
     RAIN: 0, THUNDER: 1, STORM: 0,
   },
-  topTags: ['피곤', '운동후', '업무중'],
 };
 
 describe('WeeklySummaryCard', () => {
@@ -89,27 +89,8 @@ describe('WeeklySummaryCard', () => {
     expect(getByText('-1')).toBeTruthy(); // CLOUDY decreased by 1
   });
 
-  it('displays top tags with # prefix', () => {
-    const { getByText } = render(
-      <WeeklySummaryCard summary={mockSummary} />,
-    );
-    expect(getByText('#피곤')).toBeTruthy();
-    expect(getByText('#운동후')).toBeTruthy();
-    expect(getByText('#업무중')).toBeTruthy();
-  });
-
-  it('limits top tags to 3', () => {
-    const withManyTags = {
-      ...mockSummary,
-      topTags: ['a', 'b', 'c', 'd', 'e'],
-    };
-    const { queryByText } = render(
-      <WeeklySummaryCard summary={withManyTags} />,
-    );
-    expect(queryByText('#a')).toBeTruthy();
-    expect(queryByText('#c')).toBeTruthy();
-    expect(queryByText('#d')).toBeNull();
-  });
+  // NOTE: topTags는 백엔드 WeeklySummaryResponse에 없어 UI에서 제거됨.
+  //       기존 관련 테스트는 삭제.
 
   it('renders share button when onShare is provided', () => {
     const { getByText } = render(
@@ -131,13 +112,5 @@ describe('WeeklySummaryCard', () => {
       <WeeklySummaryCard summary={mockSummary} />,
     );
     expect(queryByText('공유하기')).toBeNull();
-  });
-
-  it('hides tags section when topTags is empty', () => {
-    const noTags = { ...mockSummary, topTags: [] };
-    const { queryByText } = render(
-      <WeeklySummaryCard summary={noTags} />,
-    );
-    expect(queryByText('#')).toBeNull();
   });
 });

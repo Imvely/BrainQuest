@@ -99,7 +99,8 @@ export default function EmotionCalendarScreen() {
           <View style={styles.calendarWrap}>
             <WeatherCalendar
               yearMonth={yearMonth}
-              data={calendarData ?? []}
+              // 백엔드 MonthlyCalendarResponse { yearMonth, days } — days 배열 추출
+              data={calendarData?.days ?? []}
               onDateSelect={setSelectedDate}
             />
             <Text style={styles.watermark}>BrainQuest</Text>

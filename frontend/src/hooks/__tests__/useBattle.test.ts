@@ -328,23 +328,23 @@ describe('useBattleHistory', () => {
     expect(result.current.data![0].monsterType).toBe('SLIME');
   });
 
-  it('passes pagination params to the API', async () => {
+  it('passes from/to date range to the API (not pagination)', async () => {
     mockApi.getBattleHistory.mockResolvedValueOnce({
       success: true,
       data: [],
       message: '',
     });
 
-    renderHook(() => useBattleHistory({ page: 2, size: 10 }), {
+    renderHook(() => useBattleHistory({ from: '2026-04-01', to: '2026-04-07' }), {
       wrapper: createWrapper(),
     });
 
     await waitFor(() =>
-      expect(mockApi.getBattleHistory).toHaveBeenCalledWith({ page: 2, size: 10 }),
+      expect(mockApi.getBattleHistory).toHaveBeenCalledWith('2026-04-01', '2026-04-07'),
     );
   });
 
-  it('includes params in the query key for proper caching', async () => {
+  it('includes from/to in the query key for proper caching', async () => {
     mockApi.getBattleHistory.mockResolvedValue({
       success: true,
       data: [],
@@ -353,13 +353,19 @@ describe('useBattleHistory', () => {
 
     const wrapper = createWrapper();
 
-    const { result: r1 } = renderHook(() => useBattleHistory({ page: 0 }), { wrapper });
-    const { result: r2 } = renderHook(() => useBattleHistory({ page: 1 }), { wrapper });
+    const { result: r1 } = renderHook(
+      () => useBattleHistory({ from: '2026-04-01', to: '2026-04-07' }),
+      { wrapper },
+    );
+    const { result: r2 } = renderHook(
+      () => useBattleHistory({ from: '2026-03-25', to: '2026-04-01' }),
+      { wrapper },
+    );
 
     await waitFor(() => expect(r1.current.isSuccess).toBe(true));
     await waitFor(() => expect(r2.current.isSuccess).toBe(true));
 
-    // Two different param objects should trigger two separate API calls
+    // Two different from/to ranges should trigger two separate API calls
     expect(mockApi.getBattleHistory).toHaveBeenCalledTimes(2);
   });
 

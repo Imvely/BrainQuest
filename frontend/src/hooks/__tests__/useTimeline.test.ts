@@ -85,10 +85,21 @@ const BLOCK_FIXTURE_2: TimeBlock = {
 describe('useTimeline', () => {
   beforeEach(() => jest.clearAllMocks());
 
+  // 백엔드 TimelineResponse 래핑 헬퍼
+  function makeTimelineData(blocks: any[]) {
+    return {
+      blocks,
+      remainingMin: 480,
+      questSummary: { completed: 0, total: 0 },
+      battleSessions: [],
+      emotionRecords: [],
+    };
+  }
+
   it('fetches timeline by date and applies select to unwrap data', async () => {
     mockApi.getTimeline.mockResolvedValueOnce({
       success: true,
-      data: [BLOCK_FIXTURE, BLOCK_FIXTURE_2],
+      data: makeTimelineData([BLOCK_FIXTURE, BLOCK_FIXTURE_2]) as any,
       message: '',
     });
 
@@ -98,17 +109,18 @@ describe('useTimeline', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // select should unwrap ApiResponse.data
-    expect(result.current.data).toHaveLength(2);
-    expect(result.current.data![0].title).toBe('Morning focus');
-    expect(result.current.data![1].category).toBe('HEALTH');
+    // select는 ApiResponse.data를 unwrap하여 TimelineResponse 객체를 반환
+    expect(result.current.data).toBeTruthy();
+    expect(result.current.data!.blocks).toHaveLength(2);
+    expect(result.current.data!.blocks[0].title).toBe('Morning focus');
+    expect(result.current.data!.blocks[1].category).toBe('HEALTH');
     expect(mockApi.getTimeline).toHaveBeenCalledWith('2026-04-10');
   });
 
   it('passes different dates correctly to API', async () => {
     mockApi.getTimeline.mockResolvedValueOnce({
       success: true,
-      data: [],
+      data: makeTimelineData([]) as any,
       message: '',
     });
 
@@ -117,7 +129,7 @@ describe('useTimeline', () => {
     });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toHaveLength(0);
+    expect(result.current.data!.blocks).toHaveLength(0);
     expect(mockApi.getTimeline).toHaveBeenCalledWith('2026-05-01');
   });
 
@@ -224,8 +236,9 @@ describe('useUpdateTimeBlock', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
+    // 백엔드 UpdateBlockRequest는 blockDate를 지원하지 않으므로 페이로드에 포함되지 않음
+    // (cache invalidation key에는 사용됨)
     expect(mockApi.updateTimeBlock).toHaveBeenCalledWith(1, {
-      blockDate: '2026-04-10',
       title: 'Updated title',
     });
     expect(spy).toHaveBeenCalledWith({ queryKey: ['timeline', '2026-04-10'] });

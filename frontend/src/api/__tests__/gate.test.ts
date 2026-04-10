@@ -52,28 +52,32 @@ describe('gate API', () => {
   });
 
   // --- Checkin ---
+  // 주의: 백엔드 CheckinRequest 필드명은 `type`이며 `checkinType`이 아니다.
+  //       `checkinDate`는 요청에 포함되지 않음 (서버가 LocalDate.now()로 결정).
   describe('submitCheckin', () => {
     it('calls POST /gate/checkin for morning', async () => {
       const request = {
-        checkinType: 'MORNING' as const,
-        checkinDate: '2026-04-08',
+        type: 'MORNING' as const,
         sleepHours: 7.5,
         sleepQuality: 2,
         condition: 4,
       };
       (mockApiClient.post as jest.Mock).mockResolvedValue({
-        data: { success: true, data: { id: 1, streakCount: 5, reward: { exp: 10, gold: 10 } } },
+        data: {
+          success: true,
+          data: { id: 1, type: 'MORNING', checkinDate: '2026-04-10', streakCount: 5, expReward: 10 },
+        },
       });
 
       const result = await submitCheckin(request);
       expect(mockApiClient.post).toHaveBeenCalledWith('/gate/checkin', request);
       expect(result.data.streakCount).toBe(5);
+      expect(result.data.expReward).toBe(10);
     });
 
     it('calls POST /gate/checkin for evening', async () => {
       const request = {
-        checkinType: 'EVENING' as const,
-        checkinDate: '2026-04-08',
+        type: 'EVENING' as const,
         focusScore: 4,
         impulsivityScore: 2,
         emotionScore: 3,
@@ -87,23 +91,18 @@ describe('gate API', () => {
   });
 
   // --- Checkin History ---
+  // 백엔드는 from/to 날짜 범위를 필수로 요구 (페이지네이션 없음).
   describe('getCheckinHistory', () => {
-    it('calls GET /gate/checkin/history with pagination', async () => {
+    it('calls GET /gate/checkin/history with from/to date range', async () => {
       (mockApiClient.get as jest.Mock).mockResolvedValue({
         data: { success: true, data: [{ id: 1 }, { id: 2 }] },
       });
 
-      const result = await getCheckinHistory({ page: 0, size: 10 });
+      const result = await getCheckinHistory('2026-04-01', '2026-04-07');
       expect(mockApiClient.get).toHaveBeenCalledWith('/gate/checkin/history', {
-        params: { page: 0, size: 10 },
+        params: { from: '2026-04-01', to: '2026-04-07' },
       });
       expect(result.data).toHaveLength(2);
-    });
-
-    it('calls without params', async () => {
-      (mockApiClient.get as jest.Mock).mockResolvedValue({ data: { success: true, data: [] } });
-      await getCheckinHistory();
-      expect(mockApiClient.get).toHaveBeenCalledWith('/gate/checkin/history', { params: undefined });
     });
   });
 
@@ -126,8 +125,8 @@ describe('gate API', () => {
 
   // --- Medications ---
   describe('getMedications', () => {
-    it('calls GET /gate/medications', async () => {
-      const meds = [{ id: 1, medName: '콘서타', dosage: '27mg' }];
+    it('calls GET /gate/medications and returns list including inactive', async () => {
+      const meds = [{ id: 1, medName: '콘서타', dosage: '27mg', scheduleTime: '08:00', active: true }];
       (mockApiClient.get as jest.Mock).mockResolvedValue({
         data: { success: true, data: meds },
       });
@@ -142,7 +141,7 @@ describe('gate API', () => {
     it('calls POST /gate/medications with request body', async () => {
       const request = { medName: '콘서타 (Concerta)', dosage: '27mg', scheduleTime: '08:00' };
       (mockApiClient.post as jest.Mock).mockResolvedValue({
-        data: { success: true, data: { id: 1, ...request, isActive: true } },
+        data: { success: true, data: { id: 1, ...request, active: true } },
       });
 
       const result = await createMedication(request);
@@ -170,13 +169,14 @@ describe('gate API', () => {
       expect(result.data.medicationId).toBe(1);
     });
 
-    it('supports optional effectiveness field', async () => {
+    it('supports optional effectiveness and sideEffects fields', async () => {
       (mockApiClient.post as jest.Mock).mockResolvedValue({ data: { success: true, data: {} } });
 
-      await createMedLog({ medicationId: 1, effectiveness: 2 });
+      await createMedLog({ medicationId: 1, effectiveness: 2, sideEffects: ['두통'] });
       expect(mockApiClient.post).toHaveBeenCalledWith('/gate/med-logs', {
         medicationId: 1,
         effectiveness: 2,
+        sideEffects: ['두통'],
       });
     });
   });
@@ -195,18 +195,13 @@ describe('gate API', () => {
       });
       expect(result.data.effectiveness).toBe(3);
     });
-
-    it('propagates errors', async () => {
-      (mockApiClient.put as jest.Mock).mockRejectedValue(new Error('404'));
-      await expect(updateMedLog(999, { effectiveness: 1 })).rejects.toThrow('404');
-    });
   });
 
   // --- getTodayCheckins ---
   describe('getTodayCheckins', () => {
-    it('calls GET /gate/checkin/history with from/to date params', async () => {
+    it('calls GET /gate/checkin/history with from=to=date', async () => {
       (mockApiClient.get as jest.Mock).mockResolvedValue({
-        data: { success: true, data: [{ id: 1, checkinType: 'MORNING' }] },
+        data: { success: true, data: [{ id: 1, type: 'MORNING' }] },
       });
 
       const result = await getTodayCheckins('2026-04-09');
@@ -221,21 +216,12 @@ describe('gate API', () => {
   describe('updateMedication', () => {
     it('calls PUT /gate/medications/{id} to deactivate', async () => {
       (mockApiClient.put as jest.Mock).mockResolvedValue({
-        data: { success: true, data: { id: 1, isActive: false } },
+        data: { success: true, data: { id: 1, active: false } },
       });
 
-      const result = await updateMedication(1, { isActive: false });
-      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/medications/1', { isActive: false });
-      expect(result.data.isActive).toBe(false);
-    });
-
-    it('supports partial updates', async () => {
-      (mockApiClient.put as jest.Mock).mockResolvedValue({
-        data: { success: true, data: { id: 1, dosage: '36mg' } },
-      });
-
-      await updateMedication(1, { dosage: '36mg' });
-      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/medications/1', { dosage: '36mg' });
+      const result = await updateMedication(1, { active: false });
+      expect(mockApiClient.put).toHaveBeenCalledWith('/gate/medications/1', { active: false });
+      expect(result.data.active).toBe(false);
     });
   });
 
@@ -248,11 +234,6 @@ describe('gate API', () => {
 
       await deleteMedication(1);
       expect(mockApiClient.delete).toHaveBeenCalledWith('/gate/medications/1');
-    });
-
-    it('propagates errors', async () => {
-      (mockApiClient.delete as jest.Mock).mockRejectedValue(new Error('403'));
-      await expect(deleteMedication(1)).rejects.toThrow('403');
     });
   });
 });

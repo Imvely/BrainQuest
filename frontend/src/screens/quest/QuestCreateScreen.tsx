@@ -125,10 +125,18 @@ export default function QuestCreateScreen() {
     if (!result) return;
     setSaving(true);
     try {
+      // 백엔드 SaveQuestRequest: checkpoints는 { title, estimatedMin }만 요구
       const questRes = await createQuest({
-        ...result,
         originalTitle: title.trim(),
+        questTitle: result.questTitle,
+        questStory: result.questStory,
         category,
+        grade: result.grade,
+        estimatedMin: result.estimatedMin,
+        checkpoints: result.checkpoints.map((cp) => ({
+          title: cp.title,
+          estimatedMin: cp.estimatedMin,
+        })),
       });
 
       // Create time block if user opted in

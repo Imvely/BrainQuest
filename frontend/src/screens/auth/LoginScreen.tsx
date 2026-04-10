@@ -18,23 +18,25 @@ export default function LoginScreen() {
 
     try {
       // TODO: 실제 소셜 로그인 SDK 연동 (Kakao/Apple/Google)
-      // 지금은 provider 정보로 바로 서버 호출
+      // 지금은 임시 accessToken 문자열로 서버 호출 (dev only)
       const response = await login({
         provider,
-        providerId: `${provider.toLowerCase()}_temp_id`,
-        email: `user@${provider.toLowerCase()}.com`,
-        nickname: '모험가',
+        accessToken: `${provider.toLowerCase()}_temp_access_token`,
       });
 
-      const { accessToken, refreshToken, user, isNewUser, hasCharacter } = response.data;
+      const { accessToken, refreshToken, userId, nickname, isNewUser } = response.data;
 
       setTokens(accessToken, refreshToken);
       persistIsNewUser(isNewUser);
-      persistHasCharacter(hasCharacter);
+
+      // 백엔드 로그인 응답에는 hasCharacter가 포함되지 않음.
+      // 캐릭터 존재 여부는 기본값 false로 두고, 이후 GET /character 호출 시 갱신한다.
+      persistHasCharacter(false);
 
       setIsNewUser(isNewUser);
-      setHasCharacter(hasCharacter);
-      setUser(user);
+      setHasCharacter(false);
+      // User 엔티티 최소 정보: id + nickname만 사용 (나머지는 optional)
+      setUser({ id: userId, nickname });
     } catch {
       Alert.alert('로그인 실패', '잠시 후 다시 시도해주세요.');
     } finally {

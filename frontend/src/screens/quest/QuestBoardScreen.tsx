@@ -41,7 +41,8 @@ export default function QuestBoardScreen() {
   const queryCategory = selectedCategory === 'ALL' ? undefined : selectedCategory;
   const { data, isLoading, refetch } = useQuests({ category: queryCategory });
 
-  const quests = useMemo(() => data?.content ?? [], [data]);
+  // 백엔드 getQuests는 배열을 직접 반환 (이전: PageResponse.content)
+  const quests = useMemo(() => data ?? [], [data]);
 
   // Sort: urgent first, then E-grade highlighted, then by createdAt
   const sortedQuests = useMemo(() => {

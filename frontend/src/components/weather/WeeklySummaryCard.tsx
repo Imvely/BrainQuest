@@ -21,7 +21,9 @@ export default memo(function WeeklySummaryCard({ summary, onShare }: WeeklySumma
     );
   }
 
-  const maxCount = Math.max(...Object.values(summary.weatherDistribution), 1);
+  // 백엔드 WeeklySummaryResponse: 필드명은 `distribution` (not `weatherDistribution`).
+  const distribution = summary.distribution ?? {};
+  const maxCount = Math.max(...Object.values(distribution), 1);
 
   return (
     <Card style={styles.card}>
@@ -30,8 +32,8 @@ export default memo(function WeeklySummaryCard({ summary, onShare }: WeeklySumma
 
       {/* Bar chart */}
       <View style={styles.chart}>
-        {WEATHER_TYPES.filter((type) => (summary.weatherDistribution[type] || 0) > 0).map((type) => {
-          const count = summary.weatherDistribution[type] || 0;
+        {WEATHER_TYPES.filter((type) => (distribution[type] || 0) > 0).map((type) => {
+          const count = distribution[type] || 0;
           const config = WEATHER_CONFIG[type];
           const widthPct = Math.max((count / maxCount) * 100, 8);
           const diff = summary.comparedToLastWeek?.[type];
@@ -58,16 +60,7 @@ export default memo(function WeeklySummaryCard({ summary, onShare }: WeeklySumma
         })}
       </View>
 
-      {/* Top tags */}
-      {summary.topTags.length > 0 && (
-        <View style={styles.tagsRow}>
-          {summary.topTags.slice(0, 3).map((tag) => (
-            <View key={tag} style={styles.tagBadge}>
-              <Text style={styles.tagText}>#{tag}</Text>
-            </View>
-          ))}
-        </View>
-      )}
+      {/* Top tags — 백엔드 WeeklySummaryResponse에 topTags 필드 없음 (프론트 로컬 계산 전까지 숨김) */}
 
       {onShare && (
         <TouchableOpacity style={styles.shareBtn} onPress={onShare} activeOpacity={0.7}>

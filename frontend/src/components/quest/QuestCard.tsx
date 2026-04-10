@@ -14,8 +14,13 @@ interface QuestCardProps {
 }
 
 export default memo(function QuestCard({ quest, onPress }: QuestCardProps) {
-  const completed = quest.checkpoints.filter((c) => c.status === 'COMPLETED').length;
-  const total = quest.checkpoints.length;
+  // 목록 응답(QuestResponse)에는 checkpoints 배열이 없으므로
+  // completedCheckpoints/totalCheckpoints 필드를 우선 사용, 상세(QuestDetailResponse)에서는 배열 계산.
+  const completed =
+    quest.completedCheckpoints ??
+    quest.checkpoints?.filter((c) => c.status === 'COMPLETED').length ??
+    0;
+  const total = quest.totalCheckpoints ?? quest.checkpoints?.length ?? 0;
   const progress = total > 0 ? completed / total : 0;
   const isCompleted = quest.status === 'COMPLETED';
   const isUrgent = useMemo(() => {

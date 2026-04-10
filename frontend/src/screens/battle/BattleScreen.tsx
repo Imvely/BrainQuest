@@ -186,14 +186,26 @@ export default function BattleScreen() {
         {
           onSuccess: (res) => {
             const d = res.data;
+            // 백엔드 EndBattleResponse: itemDrop (단수), levelUp (number | null)
+            const itemDrops = d?.itemDrop
+              ? [
+                  {
+                    itemId: d.itemDrop.item.id,
+                    name: d.itemDrop.item.name,
+                    rarity: d.itemDrop.item.rarity,
+                  },
+                ]
+              : [];
+            const didLevelUp = d?.levelUp != null;
             storeActions.current.setResult({
               result: battleResult,
               expEarned: d?.expEarned ?? 0,
               goldEarned: d?.goldEarned ?? 0,
-              itemDrops: d?.itemDrops ?? [],
-              levelUp: d?.levelUp ?? false,
-              newLevel: d?.newLevel,
-              checkpointCompleted: d?.checkpointCompleted ?? false,
+              itemDrops,
+              levelUp: didLevelUp,
+              newLevel: d?.levelUp ?? undefined,
+              // checkpointCompleted는 백엔드 응답에 없음 — questId+checkpointId 연결 여부로 추정
+              checkpointCompleted: battleResult === 'VICTORY' && Boolean(routeCheckpointId),
             });
             if (battleResult === 'VICTORY') {
               victoryScale.value = withSpring(1, { damping: 6 });
@@ -264,7 +276,8 @@ export default function BattleScreen() {
   // =====================================================================
 
   const triggerAttack = useCallback(() => {
-    const atk = character?.statAtk ?? 10;
+    // 백엔드 CharacterResponse는 stats 중첩 객체로 반환. 레거시 statAtk는 fallback.
+    const atk = character?.stats?.atk ?? character?.statAtk ?? 10;
     const combo = Math.min(comboCount, MAX_COMBO);
     const multiplier = COMBO_DAMAGE_MULTIPLIER[combo] ?? 1;
     const damage = Math.floor(20 * (1 + atk / 100) * multiplier);
@@ -395,8 +408,22 @@ export default function BattleScreen() {
             {
               onSuccess: (res) => {
                 if (res.data) {
-                  storeActions.current.startFighting(res.data);
-                  const hp = character?.statHp ?? 100;
+                  // 백엔드 StartBattleResponse { sessionId, monster: { type, maxHp }, plannedMin }를
+                  // 로컬 BattleSession 로컬 모델로 변환
+                  storeActions.current.startFighting({
+                    id: res.data.sessionId,
+                    plannedMin: res.data.plannedMin,
+                    monsterType: res.data.monster.type,
+                    monsterMaxHp: res.data.monster.maxHp,
+                    monsterRemainingHp: res.data.monster.maxHp,
+                    maxCombo: 0,
+                    exitCount: 0,
+                    totalExitSec: 0,
+                    expEarned: 0,
+                    goldEarned: 0,
+                    startedAt: new Date().toISOString(),
+                  });
+                  const hp = character?.stats?.hp ?? character?.statHp ?? 100;
                   useBattleStore.setState({
                     characterHp: hp,
                     characterMaxHp: hp,

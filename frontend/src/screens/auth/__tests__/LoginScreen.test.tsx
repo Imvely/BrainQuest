@@ -45,25 +45,16 @@ const mockPersistHasCharacter = persistHasCharacter as jest.MockedFunction<typeo
 
 // --- Helpers ---
 
+// 백엔드 TokenResponse 구조: accessToken + refreshToken + userId + nickname + isNewUser
+// (전체 User 엔티티는 반환하지 않음, hasCharacter 필드도 없음)
 const SUCCESS_RESPONSE = {
   success: true,
   data: {
     accessToken: 'test-access-token',
     refreshToken: 'test-refresh-token',
-    user: {
-      id: 1,
-      email: 'user@kakao.com',
-      nickname: '모험가',
-      provider: 'KAKAO' as const,
-      adhdStatus: 'UNKNOWN' as const,
-      timezone: 'Asia/Seoul',
-      wakeTime: '07:00',
-      sleepTime: '23:00',
-      createdAt: '2025-01-01T00:00:00',
-      updatedAt: '2025-01-01T00:00:00',
-    },
+    userId: 1,
+    nickname: '모험가',
     isNewUser: true,
-    hasCharacter: false,
   },
   message: 'Login successful',
 };
@@ -164,10 +155,11 @@ describe('LoginScreen', () => {
 
     expect(mockSetTokens).toHaveBeenCalledWith('test-access-token', 'test-refresh-token');
     expect(mockPersistIsNewUser).toHaveBeenCalledWith(true);
-    expect(mockPersistHasCharacter).toHaveBeenCalledWith(false);
+    expect(mockPersistHasCharacter).toHaveBeenCalledWith(false); // 백엔드 미제공 → 기본 false
     expect(mockSetIsNewUser).toHaveBeenCalledWith(true);
     expect(mockSetHasCharacter).toHaveBeenCalledWith(false);
-    expect(mockSetUser).toHaveBeenCalledWith(SUCCESS_RESPONSE.data.user);
+    // setUser는 백엔드 응답의 userId + nickname 만으로 User 객체 구성
+    expect(mockSetUser).toHaveBeenCalledWith({ id: 1, nickname: '모험가' });
   });
 
   // 8. On login failure: shows Alert

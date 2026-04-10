@@ -265,11 +265,11 @@ export default function CheckinScreen() {
     setLoading(true);
 
     try {
-      const dateForSubmit = fillMissedEvening ? yesterday : today;
-
+      // 백엔드 CheckinRequest: `type` 필드 사용, `checkinDate`는 서버가 결정.
+      // (어제 저녁 체크인 뒤늦게 입력하는 케이스는 백엔드 미지원 — 서버 today 기준으로만 동작)
       const body = activeType === 'MORNING'
-        ? { checkinType: 'MORNING' as const, checkinDate: dateForSubmit, sleepHours, sleepQuality: sleepQuality!, condition: condition! }
-        : { checkinType: 'EVENING' as const, checkinDate: dateForSubmit, focusScore: focusScore!, impulsivityScore: impulsivityScore!, emotionScore: emotionScore!, memo: memo || undefined };
+        ? { type: 'MORNING' as const, sleepHours, sleepQuality: sleepQuality!, condition: condition! }
+        : { type: 'EVENING' as const, focusScore: focusScore!, impulsivityScore: impulsivityScore!, emotionScore: emotionScore!, memo: memo || undefined };
 
       const response = await submitCheckin(body);
 
@@ -311,17 +311,21 @@ export default function CheckinScreen() {
       // Evening summary
       if (activeType === 'EVENING' && !fillMissedEvening) {
         try {
+          // 백엔드 getTimeline 응답은 TimelineResponse { blocks, remainingMin, questSummary, battleSessions, emotionRecords }
           const timelineRes = await getTimeline(today);
-          const blocks: TimeBlock[] = timelineRes.data ?? [];
-          const battleBlocks = blocks.filter((b) => b.questId);
+          const timeline = timelineRes.data;
+          const blocks: TimeBlock[] = (timeline?.blocks ?? []) as TimeBlock[];
+          const battleSessions = timeline?.battleSessions ?? [];
+          const battleWins = battleSessions.filter((b) => b.result === 'VICTORY').length;
+          const questSummary = timeline?.questSummary;
           setSummary({
-            battleCount: battleBlocks.length,
-            battleWins: battleBlocks.filter((b) => b.status === 'COMPLETED').length,
-            questCompleted: blocks.filter((b) => b.status === 'COMPLETED').length,
-            questTotal: blocks.length,
+            battleCount: battleSessions.length,
+            battleWins,
+            questCompleted: questSummary?.completed ?? 0,
+            questTotal: questSummary?.total ?? 0,
             dominantWeather: null,
-            achievementRate: blocks.length > 0
-              ? Math.round((blocks.filter((b) => b.status === 'COMPLETED').length / blocks.length) * 100)
+            achievementRate: (questSummary?.total ?? 0) > 0
+              ? Math.round((questSummary!.completed / questSummary!.total) * 100)
               : 0,
           });
           setShowSummary(true);
@@ -397,7 +401,7 @@ export default function CheckinScreen() {
         </Animated.View>
 
         <Toast
-          message={`+${result.reward.exp} EXP  +${result.reward.gold} Gold`}
+          message={`+${result.expReward} EXP  +10 Gold`}
           visible={showToast}
           onHide={() => setShowToast(false)}
           type="exp"
@@ -412,12 +416,13 @@ export default function CheckinScreen() {
 
           <View style={styles.rewardRow}>
             <View style={styles.rewardItem}>
-              <Text style={styles.rewardValue}>+{result.reward.exp}</Text>
+              <Text style={styles.rewardValue}>+{result.expReward}</Text>
               <Text style={styles.rewardLabel}>EXP</Text>
             </View>
             <View style={styles.rewardDivider} />
             <View style={styles.rewardItem}>
-              <Text style={[styles.rewardValue, { color: Colors.GOLD }]}>+{result.reward.gold}</Text>
+              {/* 골드는 이벤트 버스 통해 서버에서 별도 지급 — CHECKIN_GOLD 상수 고정 */}
+              <Text style={[styles.rewardValue, { color: Colors.GOLD }]}>+10</Text>
               <Text style={styles.rewardLabel}>Gold</Text>
             </View>
           </View>

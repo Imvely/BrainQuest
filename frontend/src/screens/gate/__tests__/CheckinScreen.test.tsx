@@ -122,8 +122,16 @@ function setupInitMocks(opts: {
   mockGetMedications.mockResolvedValue({ data: opts.meds ?? [] });
 }
 
+// 백엔드 CheckinResponse: { id, type, checkinDate, streakCount, expReward }
+// (reward 객체 없음 — expReward만 flat integer로 반환, gold는 이벤트 버스로 서버에서 자동 지급)
 const CHECKIN_SUCCESS = {
-  data: { id: 1, streakCount: 5, reward: { exp: 10, gold: 10 } },
+  data: {
+    id: 1,
+    type: 'MORNING',
+    checkinDate: '2026-04-10',
+    streakCount: 5,
+    expReward: 10,
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -324,9 +332,10 @@ describe('CheckinScreen', () => {
         fireEvent.press(getByText('체크인 완료!'));
       });
 
+      // 백엔드 CheckinRequest는 `type` 필드, `checkinDate` 없음
       expect(mockSubmitCheckin).toHaveBeenCalledWith(
         expect.objectContaining({
-          checkinType: 'MORNING',
+          type: 'MORNING',
           sleepQuality: 3,
           condition: 5,
           sleepHours: 7,
@@ -400,7 +409,7 @@ describe('CheckinScreen', () => {
 
       expect(mockSubmitCheckin).toHaveBeenCalledWith(
         expect.objectContaining({
-          checkinType: 'EVENING',
+          type: 'EVENING',
           focusScore: 3,
           impulsivityScore: 3,
           emotionScore: 3,

@@ -76,28 +76,29 @@ const mockGetCharacter = characterApi.getCharacter as jest.MockedFunction<typeof
 const mockGetQuests = questApi.getQuests as jest.MockedFunction<typeof questApi.getQuests>;
 
 // --- Test data ---
+// 백엔드 CharacterResponse: stats는 중첩 객체 { atk, wis, def, agi, hp }
 const MOCK_CHARACTER = {
-  id: 1, userId: 1, name: '테스트', classType: 'WARRIOR' as const,
+  id: 1, name: '테스트', classType: 'WARRIOR' as const,
   level: 5, exp: 42, expToNext: 200,
-  statAtk: 15, statWis: 10, statDef: 10, statAgi: 10, statHp: 100,
+  stats: { atk: 15, wis: 10, def: 10, agi: 10, hp: 100 },
   gold: 300, appearance: { hair: 'short_a', outfit: 'armor_light', color: '#6C5CE7' },
-  equippedItems: { helmet: null, armor: null, weapon: null, accessory: null },
+  equippedItems: {},
 };
 
-const MOCK_QUEST_PAGE = {
-  content: [
-    {
-      id: 1, userId: 1, originalTitle: '보고서', questTitle: '마법 보고서', questStory: '',
-      category: 'WORK' as const, grade: 'C' as const, estimatedMin: 60, expReward: 50, goldReward: 30,
-      status: 'ACTIVE' as const, checkpoints: [
-        { id: 1, questId: 1, orderNum: 1, title: '자료수집', estimatedMin: 20, expReward: 15, goldReward: 10, status: 'COMPLETED' as const },
-        { id: 2, questId: 1, orderNum: 2, title: '작성', estimatedMin: 40, expReward: 35, goldReward: 20, status: 'PENDING' as const },
-      ],
-      createdAt: '', updatedAt: '',
-    },
-  ],
-  totalElements: 1, totalPages: 1, page: 0, size: 20,
-};
+// 백엔드 getQuests는 배열 직접 반환 (PageResponse 래핑 없음)
+const MOCK_QUEST_PAGE = [
+  {
+    id: 1, userId: 1, originalTitle: '보고서', questTitle: '마법 보고서', questStory: '',
+    category: 'WORK' as const, grade: 'C' as const, estimatedMin: 60, expReward: 50, goldReward: 30,
+    status: 'ACTIVE' as const,
+    completedCheckpoints: 1, totalCheckpoints: 2,
+    checkpoints: [
+      { id: 1, questId: 1, orderNum: 1, title: '자료수집', estimatedMin: 20, expReward: 15, goldReward: 10, status: 'COMPLETED' as const },
+      { id: 2, questId: 1, orderNum: 2, title: '작성', estimatedMin: 40, expReward: 35, goldReward: 20, status: 'PENDING' as const },
+    ],
+    createdAt: '', updatedAt: '',
+  },
+];
 
 const MOCK_BLOCKS = [
   {
@@ -119,10 +120,25 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
+// 백엔드 TimelineResponse 래핑 헬퍼
+function makeTimelineResponse(blocks: any[]) {
+  return {
+    success: true,
+    data: {
+      blocks,
+      remainingMin: 480,
+      questSummary: { completed: 0, total: 0 },
+      battleSessions: [],
+      emotionRecords: [],
+    },
+    message: '',
+  };
+}
+
 describe('TimelineScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockGetTimeline.mockResolvedValue({ success: true, data: [], message: '' });
+    mockGetTimeline.mockResolvedValue(makeTimelineResponse([]) as any);
     mockGetCharacter.mockResolvedValue({ success: true, data: MOCK_CHARACTER, message: '' });
     mockGetQuests.mockResolvedValue({ success: true, data: MOCK_QUEST_PAGE, message: '' } as any);
     useTimelineStore.setState({ blocks: [], remainingMin: 480, nextBlock: null });
@@ -193,9 +209,10 @@ describe('TimelineScreen', () => {
 
   // --- 8. Shows empty state when no quests ---
   it('shows empty state "진행 중인 퀘스트가 없습니다" when no quests', async () => {
+    // 백엔드 getQuests는 배열을 직접 반환 (PageResponse 래핑 없음)
     mockGetQuests.mockResolvedValue({
       success: true,
-      data: { content: [], totalElements: 0, totalPages: 0, page: 0, size: 20 },
+      data: [],
       message: '',
     } as any);
 
@@ -275,7 +292,7 @@ describe('TimelineScreen', () => {
   });
 
   it('syncs blocks to store after fetch', async () => {
-    mockGetTimeline.mockResolvedValueOnce({ success: true, data: MOCK_BLOCKS, message: '' });
+    mockGetTimeline.mockResolvedValueOnce(makeTimelineResponse(MOCK_BLOCKS) as any);
     renderWithProviders(<TimelineScreen />);
 
     await waitFor(() => {

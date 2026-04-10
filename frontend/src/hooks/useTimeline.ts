@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import * as mapApi from '../api/map';
-import { TimeBlockCreateRequest } from '../types/timeline';
+import { TimeBlockCreateRequest, TimeBlockUpdateRequest } from '../types/timeline';
 import { STALE_TIME } from '../constants/query';
 
+/**
+ * 타임라인 조회 — 백엔드는 {@code TimelineResponse} 객체 전체를 반환한다.
+ * ({@code blocks}, {@code remainingMin}, {@code questSummary}, {@code battleSessions}, {@code emotionRecords})
+ */
 export function useTimeline(date: string) {
   return useQuery({
     queryKey: ['timeline', date],
@@ -28,7 +32,7 @@ export function useUpdateTimeBlock() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, ...request }: Partial<TimeBlockCreateRequest> & { id: number; blockDate?: string }) =>
+    mutationFn: ({ id, blockDate, ...request }: TimeBlockUpdateRequest & { id: number; blockDate?: string }) =>
       mapApi.updateTimeBlock(id, request),
     onSuccess: (_, variables) => {
       if (variables.blockDate) {

@@ -70,9 +70,10 @@ export default function TimelineScreen() {
   const deleteBlock = useDeleteTimeBlock();
 
   // Sync server data → store
+  // 백엔드 TimelineResponse: { blocks, remainingMin, questSummary, battleSessions, emotionRecords }
   useEffect(() => {
-    if (timelineData) {
-      setBlocks(timelineData as TimeBlock[]);
+    if (timelineData?.blocks) {
+      setBlocks(timelineData.blocks as TimeBlock[]);
     }
   }, [timelineData, setBlocks]);
 
@@ -148,8 +149,9 @@ export default function TimelineScreen() {
   }, [nextBlock]);
 
   // --- Quest progress ---
+  // 백엔드 getQuests는 배열 직접 반환 (PageResponse 래핑 없음)
   const activeQuests = useMemo(
-    () => (quests?.content ?? []).filter((q) => q.status === 'ACTIVE' || q.status === 'IN_PROGRESS'),
+    () => (quests ?? []).filter((q) => q.status === 'ACTIVE' || q.status === 'IN_PROGRESS'),
     [quests],
   );
 
@@ -295,8 +297,13 @@ export default function TimelineScreen() {
 
 // --- Quest Mini Card ---
 const QuestMiniCard = React.memo(function QuestMiniCard({ quest }: { quest: Quest }) {
-  const completedCount = quest.checkpoints.filter((c) => c.status === 'COMPLETED').length;
-  const totalCount = quest.checkpoints.length;
+  // 백엔드 목록 응답(QuestResponse)은 completedCheckpoints/totalCheckpoints 진행률 제공,
+  // 상세 응답(QuestDetailResponse)에만 checkpoints 배열 포함. 둘 다 지원.
+  const completedCount =
+    quest.completedCheckpoints ??
+    quest.checkpoints?.filter((c) => c.status === 'COMPLETED').length ??
+    0;
+  const totalCount = quest.totalCheckpoints ?? quest.checkpoints?.length ?? 0;
   const progress = totalCount > 0 ? completedCount / totalCount : 0;
 
   return (

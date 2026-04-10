@@ -69,11 +69,12 @@ const mockCompletedQuest = {
 };
 
 // --- Helper to build mock return value ---
+// 백엔드 getQuests는 배열을 직접 반환한다 (PageResponse 래핑 없음)
 const mockRefetch = jest.fn().mockResolvedValue(undefined);
 
 function setupUseQuests(overrides: { content?: any[]; isLoading?: boolean } = {}) {
   mockedUseQuests.mockReturnValue({
-    data: { content: overrides.content ?? [] },
+    data: overrides.content ?? [],
     isLoading: overrides.isLoading ?? false,
     refetch: mockRefetch,
   } as any);

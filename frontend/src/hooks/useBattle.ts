@@ -41,10 +41,21 @@ export function useRecordReturn() {
   });
 }
 
-export function useBattleHistory(params?: { page?: number; size?: number }) {
+/**
+ * 전투 기록 조회 — 백엔드는 {@code from}/{@code to} LocalDate 범위를 필수로 요구한다.
+ * 호출자는 기본적으로 "오늘 ~ 7일 전" 범위를 제공해야 한다.
+ */
+export function useBattleHistory(params?: { from?: string; to?: string }) {
+  const today = new Date().toISOString().slice(0, 10);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  const from = params?.from ?? weekAgo;
+  const to = params?.to ?? today;
+
   return useQuery({
-    queryKey: ['battleHistory', params],
-    queryFn: () => battleApi.getBattleHistory(params),
+    queryKey: ['battleHistory', from, to],
+    queryFn: () => battleApi.getBattleHistory(from, to),
     select: (res) => res.data,
     staleTime: STALE_TIME.NORMAL,
   });

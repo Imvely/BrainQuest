@@ -1,14 +1,25 @@
 import React, { memo, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { getDaysInMonth, getDay, format } from 'date-fns';
-import { EmotionCalendarDay } from '../../types/emotion';
-import { WEATHER_CONFIG } from '../../constants/weather';
+import { DayEmotionSummary, EmotionCalendarDay } from '../../types/emotion';
+import { WEATHER_CONFIG, WeatherType } from '../../constants/weather';
 import { Colors } from '../../constants/colors';
 import { Fonts, FontSize } from '../../constants/fonts';
 
+/**
+ * 내부 정규화 셀 데이터 — 레거시 {@link EmotionCalendarDay}와
+ * 신규 {@link DayEmotionSummary}(백엔드 응답) 모두 수용.
+ */
+interface CalendarCellData {
+  date: string;
+  weatherType: WeatherType;
+  count: number;
+}
+
 interface WeatherCalendarProps {
   yearMonth: string;
-  data: EmotionCalendarDay[];
+  /** 배열 또는 백엔드 {@code MonthlyCalendarResponse} 형태 모두 수용 */
+  data: DayEmotionSummary[] | EmotionCalendarDay[];
   onDateSelect: (date: string) => void;
 }
 
@@ -18,8 +29,18 @@ type Cell = { day: number | null; date: string | null };
 
 export default memo(function WeatherCalendar({ yearMonth, data, onDateSelect }: WeatherCalendarProps) {
   const dataMap = useMemo(() => {
-    const map = new Map<string, EmotionCalendarDay>();
-    data.forEach((d) => map.set(d.date, d));
+    const map = new Map<string, CalendarCellData>();
+    // 방어적 기본값: data가 undefined/null인 경우 빈 배열로 처리
+    const items = Array.isArray(data) ? data : [];
+    items.forEach((d) => {
+      // DayEmotionSummary(dominantWeather, recordCount) vs EmotionCalendarDay(weatherType, count) 정규화
+      const weatherType =
+        (d as DayEmotionSummary).dominantWeather ??
+        (d as EmotionCalendarDay).weatherType;
+      const count =
+        (d as DayEmotionSummary).recordCount ?? (d as EmotionCalendarDay).count ?? 0;
+      map.set(d.date, { date: d.date, weatherType, count });
+    });
     return map;
   }, [data]);
 

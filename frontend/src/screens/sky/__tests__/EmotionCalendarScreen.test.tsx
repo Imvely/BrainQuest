@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import EmotionCalendarScreen from '../EmotionCalendarScreen';
-import { EmotionCalendarDay, WeeklySummary } from '../../../types/emotion';
+import { MonthlyCalendarResponse, WeeklySummary } from '../../../types/emotion';
 
 // ---------------------------------------------------------------------------
 // Navigation mock
@@ -15,19 +15,39 @@ jest.mock('@react-navigation/native', () => ({
 // ---------------------------------------------------------------------------
 // Hook mocks
 // ---------------------------------------------------------------------------
-const mockCalendarData: EmotionCalendarDay[] = [
-  { date: '2026-04-01', weatherType: 'SUNNY', avgIntensity: 4, count: 2 },
-  { date: '2026-04-02', weatherType: 'RAIN', avgIntensity: 3, count: 1 },
-  { date: '2026-04-09', weatherType: 'CLOUDY', avgIntensity: 2, count: 1 },
-];
+// 백엔드 MonthlyCalendarResponse: { yearMonth, days: DayEmotionSummary[] }
+const mockCalendarData: MonthlyCalendarResponse = {
+  yearMonth: '2026-04',
+  days: [
+    {
+      date: '2026-04-01',
+      dominantWeather: 'SUNNY',
+      recordCount: 2,
+      records: [],
+    },
+    {
+      date: '2026-04-02',
+      dominantWeather: 'RAIN',
+      recordCount: 1,
+      records: [],
+    },
+    {
+      date: '2026-04-09',
+      dominantWeather: 'CLOUDY',
+      recordCount: 1,
+      records: [],
+    },
+  ],
+};
 
+// 백엔드 WeeklySummaryResponse: distribution (not weatherDistribution), avgWeatherValue (not avgIntensity),
+// no dominantWeather, no topTags
 const mockWeeklySummary: WeeklySummary = {
   weekStart: '2026-04-06',
   weekEnd: '2026-04-12',
-  dominantWeather: 'SUNNY',
-  avgIntensity: 3.5,
   totalRecords: 5,
-  weatherDistribution: {
+  avgWeatherValue: 5.2,
+  distribution: {
     SUNNY: 3,
     RAIN: 1,
     CLOUDY: 1,
@@ -45,7 +65,6 @@ const mockWeeklySummary: WeeklySummary = {
     THUNDER: 0,
     STORM: 0,
   },
-  topTags: ['피곤', '운동후'],
 };
 
 jest.mock('../../../hooks/useEmotions', () => ({
@@ -142,12 +161,7 @@ describe('EmotionCalendarScreen', () => {
     expect(getByText('이번 주 감정 날씨')).toBeTruthy();
   });
 
-  // 10. Renders top tags in weekly summary
-  it('renders top tags in weekly summary', () => {
-    const { getByText } = render(<EmotionCalendarScreen />);
-    expect(getByText('#피곤')).toBeTruthy();
-    expect(getByText('#운동후')).toBeTruthy();
-  });
+  // 10. (삭제) topTags 필드는 백엔드 WeeklySummaryResponse에 없으므로 UI에서 제거됨.
 
   // 11. Renders BrainQuest watermark
   it('renders BrainQuest watermark in calendar area', () => {
